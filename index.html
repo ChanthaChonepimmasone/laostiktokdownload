@@ -3,670 +3,536 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LAZAORDER - ບໍລິການຮັບສັ່ງສິນຄ້າຈາກ Lazada</title>
+    <title>ຂໍ້ມູນຜູ້ພັດທະນາ | Lao Karaoke</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* ฟอนต์และพื้นหลัง */
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --accent-color: #e74c3c;
+            --dark-color: #2c3e50;
+            --light-color: #ecf0f1;
+            --gradient: linear-gradient(135deg, #3498db, #2ecc71);
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Noto Sans Lao', 'Segoe UI', sans-serif;
         }
-
-        :root {
-            --primary-color: #2c3e50;
-            --accent-color: #e74c3c;
-            --vintage-brown: #8B4513;
-            --cream: #f5f5dc;
-            --dark-gray: #333;
-            --light-gray: #f8f9fa;
-        }
-
+        
         body {
-            background-color: var(--light-gray);
-            color: var(--dark-gray);
+            font-family: 'Noto Sans Lao', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
             line-height: 1.6;
-            font-size: 16px;
+            padding: 20px;
         }
-
-        /* Header Mobile Styles */
-        header {
-            background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('https://images.unsplash.com/photo-1476820865390-c52aeebb9891?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80');
-            background-size: cover;
-            background-position: center;
-            color: white;
-            padding: 1.5rem 1rem;
-            text-align: center;
-            position: relative;
-        }
-
-        .logo {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--cream);
-            text-shadow: 2px 2px 0 var(--vintage-brown);
-            letter-spacing: 1px;
-            margin-bottom: 0.5rem;
-        }
-
-        .logo-subtitle {
-            font-size: 1rem;
-            font-style: italic;
-            color: var(--cream);
-            margin-bottom: 1rem;
-        }
-
-        .tagline {
-            font-size: 1.1rem;
-            color: var(--cream);
-            margin-bottom: 1rem;
-        }
-
-        /* Mobile Navigation */
-        .mobile-nav {
-            background-color: var(--primary-color);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            padding: 1rem;
-        }
-
-        .nav-toggle {
-            display: none;
-        }
-
-        .nav-toggle-label {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            color: white;
-            font-weight: bold;
-            font-size: 1.1rem;
-            cursor: pointer;
-        }
-
-        .nav-toggle-label span {
-            font-size: 1.5rem;
-        }
-
-        .nav-menu {
-            display: none;
-            background-color: var(--primary-color);
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-        }
-
-        .nav-toggle:checked ~ .nav-menu {
-            display: block;
-        }
-
-        .nav-menu ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        .nav-menu ul li {
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .nav-menu ul li:last-child {
-            border-bottom: none;
-        }
-
-        .nav-menu ul li a {
-            display: block;
-            color: white;
-            text-decoration: none;
-            padding: 1rem;
-            font-weight: bold;
-            transition: background-color 0.3s;
-        }
-
-        .nav-menu ul li a:hover {
-            background-color: rgba(255,255,255,0.1);
-        }
-
-        /* Main Content Mobile */
+        
         .container {
-            padding: 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
         }
-
-        .section-title {
+        
+        /* Header */
+        .page-header {
             text-align: center;
-            margin-bottom: 1.5rem;
-            color: var(--primary-color);
-            font-size: 1.5rem;
-            position: relative;
-            padding-bottom: 0.5rem;
-        }
-
-        .section-title:after {
-            content: '';
-            display: block;
-            width: 60px;
-            height: 3px;
-            background-color: var(--accent-color);
-            margin: 0.5rem auto;
-        }
-
-        /* Services Mobile */
-        .services {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .service-card {
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            transition: transform 0.3s, box-shadow 0.3s;
-            border-top: 4px solid var(--vintage-brown);
-        }
-
-        .service-card:active {
-            transform: scale(0.98);
-        }
-
-        .service-card h3 {
-            background-color: var(--primary-color);
+            margin-bottom: 50px;
             color: white;
-            padding: 1rem;
-            margin: 0;
-            font-size: 1.2rem;
         }
-
-        .service-card .content {
-            padding: 1.2rem;
-        }
-
-        .service-card ul {
-            padding-left: 1.2rem;
-            margin: 0.8rem 0;
-        }
-
-        .service-card li {
-            margin-bottom: 0.5rem;
-        }
-
-        /* Steps Mobile */
-        .steps {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .step {
-            background: white;
-            border-radius: 10px;
-            padding: 1.5rem 1rem;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        
+        .page-header h1 {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
             position: relative;
-            text-align: center;
+            display: inline-block;
         }
-
-        .step-number {
+        
+        .page-header h1::after {
+            content: "";
             position: absolute;
-            top: -15px;
+            bottom: -10px;
             left: 50%;
             transform: translateX(-50%);
-            background-color: var(--accent-color);
+            width: 100px;
+            height: 4px;
+            background: var(--secondary-color);
+            border-radius: 2px;
+        }
+        
+        .page-header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        /* Main Content */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        /* Profile Card */
+        .profile-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            position: relative;
+        }
+        
+        .profile-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .profile-header {
+            background: var(--gradient);
+            padding: 30px;
+            text-align: center;
             color: white;
+            position: relative;
+        }
+        
+        .profile-image {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 5px solid white;
+            object-fit: cover;
+            margin: 0 auto 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            transition: var(--transition);
+        }
+        
+        .profile-card:hover .profile-image {
+            transform: scale(1.05);
+        }
+        
+        .profile-name {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+        
+        .profile-title {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        
+        .profile-role {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .profile-details {
+            padding: 30px;
+        }
+        
+        .detail-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            transition: var(--transition);
+            border-left: 4px solid transparent;
+        }
+        
+        .detail-item:hover {
+            background: #f8f9fa;
+            border-left-color: var(--primary-color);
+            transform: translateX(5px);
+        }
+        
+        .detail-item i {
             width: 40px;
             height: 40px;
+            background: var(--gradient);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
-            font-size: 1.2rem;
-            border: 3px solid white;
-        }
-
-        .step h3 {
-            color: var(--primary-color);
-            margin-bottom: 0.5rem;
-            font-size: 1.2rem;
-        }
-
-        /* CTA Mobile */
-        .cta-section {
-            background-color: var(--primary-color);
             color: white;
-            padding: 2rem 1rem;
-            text-align: center;
-            border-radius: 10px;
-            margin-bottom: 2rem;
-        }
-
-        .cta-button {
-            display: inline-block;
-            background-color: var(--accent-color);
-            color: white;
-            padding: 1rem 2rem;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: bold;
+            margin-right: 15px;
             font-size: 1.1rem;
-            margin-top: 1rem;
-            transition: background-color 0.3s;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
-
-        .cta-button:active {
-            transform: scale(0.95);
+        
+        .detail-text {
+            flex: 1;
         }
-
-        /* Pricing Mobile */
-        .pricing-cards {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .pricing-card {
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            border: 2px solid var(--vintage-brown);
-        }
-
-        .pricing-card h3 {
-            background-color: var(--vintage-brown);
-            color: white;
-            padding: 1rem;
+        
+        .detail-text p {
             margin: 0;
-            font-size: 1.2rem;
-            text-align: center;
-        }
-
-        .pricing-card .content {
-            padding: 1.2rem;
-        }
-
-        .price {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--accent-color);
-            text-align: center;
-            margin-bottom: 1rem;
-        }
-
-        /* Contact Form Mobile */
-        .contact-form {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-        }
-
-        .form-group {
-            margin-bottom: 1.2rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: bold;
-            color: var(--primary-color);
-        }
-
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-            width: 100%;
-            padding: 0.8rem;
-            border: 2px solid #ddd;
-            border-radius: 8px;
             font-size: 1rem;
-            transition: border-color 0.3s;
         }
-
-        .form-group input:focus,
-        .form-group textarea:focus,
-        .form-group select:focus {
-            border-color: var(--accent-color);
-            outline: none;
+        
+        .detail-label {
+            font-weight: 600;
+            color: var(--dark-color);
+            display: block;
+            margin-bottom: 5px;
         }
-
-        .submit-btn {
-            background-color: var(--vintage-brown);
-            color: white;
-            border: none;
-            padding: 1rem 2rem;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 1.1rem;
-            font-weight: bold;
-            transition: background-color 0.3s;
-            width: 100%;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-
-        .submit-btn:active {
-            transform: scale(0.98);
-        }
-
-        /* Footer Mobile */
-        footer {
-            background-color: var(--dark-gray);
-            color: white;
-            text-align: center;
-            padding: 2rem 1rem;
-            margin-top: 2rem;
-        }
-
-        .footer-logo {
-            font-size: 2rem;
-            font-weight: bold;
-            color: var(--cream);
-            margin-bottom: 0.5rem;
-        }
-
-        .social-links {
-            margin: 1rem 0;
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-        }
-
-        .social-links a {
-            color: white;
-            font-size: 1.5rem;
-            text-decoration: none;
-            padding: 0.5rem;
-        }
-
-        .contact-info {
-            margin: 1rem 0;
-            line-height: 1.8;
-        }
-
-        /* Floating Action Button */
-        .fab {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            background-color: var(--accent-color);
-            color: white;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
-            font-size: 1.5rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 1000;
-            transition: transform 0.3s;
-        }
-
-        .fab:active {
-            transform: scale(0.9);
-        }
-
-        /* Quick Actions */
-        .quick-actions {
-            display: flex;
-            justify-content: space-around;
-            margin: 1rem 0 2rem 0;
+        
+        /* Bio Section */
+        .bio-section {
             background: white;
-            padding: 1rem;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
         }
-
-        .quick-action {
-            text-align: center;
-            padding: 0.5rem;
+        
+        .bio-section:hover {
+            transform: translateY(-5px);
         }
-
-        .quick-action .icon {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-            color: var(--accent-color);
+        
+        .section-title {
+            color: var(--dark-color);
+            font-size: 1.8rem;
+            margin-bottom: 25px;
+            position: relative;
+            padding-bottom: 15px;
         }
-
-        /* WhatsApp Style Chat */
-        .whatsapp-chat {
-            position: fixed;
-            bottom: 2rem;
-            left: 2rem;
-            background-color: #25D366;
-            color: white;
+        
+        .section-title::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
             width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
+            height: 4px;
+            background: var(--gradient);
+            border-radius: 2px;
+        }
+        
+        .bio-content {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #555;
+        }
+        
+        .bio-content p {
+            margin-bottom: 20px;
+        }
+        
+        .highlight {
+            background: linear-gradient(120deg, transparent 0%, transparent 50%, #ffeaa7 50%);
+            background-size: 220% 100%;
+            background-position: 100% 0;
+            transition: all 0.5s ease;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        
+        .bio-content p:hover .highlight {
+            background-position: 0 0;
+        }
+        
+        /* Gallery Section */
+        .gallery-section {
+            grid-column: 1 / -1;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: var(--shadow);
+            margin-bottom: 40px;
+        }
+        
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .gallery-item {
+            position: relative;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: var(--transition);
+            height: 280px;
+        }
+        
+        .gallery-item:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .gallery-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: var(--transition);
+        }
+        
+        .gallery-item:hover .gallery-image {
+            transform: scale(1.1);
+        }
+        
+        .gallery-caption {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            color: white;
+            padding: 20px;
+            transform: translateY(100%);
+            transition: var(--transition);
+        }
+        
+        .gallery-item:hover .gallery-caption {
+            transform: translateY(0);
+        }
+        
+        /* Back Button */
+        .back-btn-container {
+            text-align: center;
+            margin-top: 30px;
+        }
+        
+        .back-btn {
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
+            padding: 15px 35px;
+            background: var(--gradient);
+            color: white;
             text-decoration: none;
-            font-size: 2rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 1000;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: var(--transition);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .back-btn::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .back-btn:hover::before {
+            left: 100%;
+        }
+        
+        .back-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.6);
+        }
+        
+        .back-btn i {
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 992px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .page-header h1 {
+                font-size: 2.5rem;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .page-header h1 {
+                font-size: 2rem;
+            }
+            
+            .profile-header {
+                padding: 20px;
+            }
+            
+            .profile-image {
+                width: 120px;
+                height: 120px;
+            }
+            
+            .profile-name {
+                font-size: 1.5rem;
+            }
+            
+            .gallery-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .bio-section, .gallery-section {
+                padding: 25px;
+            }
+        }
+        
+        /* Animation */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-fade-in {
+            animation: fadeInUp 0.8s ease-out;
+        }
+        
+        .delay-1 {
+            animation-delay: 0.2s;
+        }
+        
+        .delay-2 {
+            animation-delay: 0.4s;
+        }
+        
+        .delay-3 {
+            animation-delay: 0.6s;
         }
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <!-- Header -->
-    <header>
-        <div class="logo">LAZAORDER</div>
-        <div class="logo-subtitle">ບໍລິການຮັບສັ່ງສິນຄ້າຈາກ Lazada</div>
-        <p class="tagline">ສົ່ງສິນຄ້າຈາກ Lazada ເຖິງຂົນສົ່ງທີ່ຕ້ອງການ</p>
-    </header>
-
-    <!-- Mobile Navigation -->
-    <nav class="mobile-nav">
-        <input type="checkbox" id="nav-toggle" class="nav-toggle">
-        <label for="nav-toggle" class="nav-toggle-label">
-            ເມນູ <span>☰</span>
-        </label>
-        <div class="nav-menu">
-            <ul>
-                <li><a href="#services"><i class="fas fa-concierge-bell"></i> ບໍລິການ</a></li>
-                <li><a href="#how-it-works"><i class="fas fa-list-ol"></i> ວິທີການ</a></li>
-                <li><a href="#pricing"><i class="fas fa-tags"></i> ລາຄາ</a></li>
-                <li><a href="#contact"><i class="fas fa-phone"></i> ຕິດຕໍ່</a></li>
-            </ul>
-        </div>
-    </nav>
-
     <div class="container">
-        <!-- Quick Actions -->
-     
-            <div class="quick-action">
-                <div class="icon">💰</div>
-                <div>ລາຄາດີ</div>
+        <header class="page-header animate-fade-in">
+            <h1>ຂໍ້ມູນຜູ້ພັດທະນາ</h1>
+            <p>ຜູ້ສ້າງເວັບໄຊທ໌ Lao Karaoke</p>
+        </header>
+        
+        <div class="main-content">
+            <!-- Profile Card -->
+            <div class="profile-card animate-fade-in delay-1">
+                <div class="profile-header">
+                    <img src="WhatsApp Image 2025-10-12 at 23.28.06_7ba632be.jpg" alt="ຮູບຜູ້ພັດທະນາ" class="profile-image">
+                    <h2 class="profile-name">ຈັນທະຈອນ ພິມມະສອນ</h2>
+                    <p class="profile-title">ນັກພັດທະນາເວັບໄຊທ໌ ແລະ ໂປຣແກຣມ</p>
+                    <span class="profile-role">ຜູ້ສ້າງເວັບໄຊທ໌ Lao Karaoke</span>
+                </div>
+                
+                <div class="profile-details">
+                    <div class="detail-item">
+                        <i class="fas fa-briefcase"></i>
+                        <div class="detail-text">
+                            <span class="detail-label">ຕຳແໜ່ງ</span>
+                            <p>ນັກພັດທະນາເວັບໄຊທ໌ ແລະ ໂປຣແກຣມ</p>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <i class="fas fa-envelope"></i>
+                        <div class="detail-text">
+                            <span class="detail-label">ອີເມວ</span>
+                            <p>jonepms216@gmail.com</p>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <i class="fas fa-phone"></i>
+                        <div class="detail-text">
+                            <span class="detail-label">ໂທລະສັບ</span>
+                            <p>+856 20 29988148</p>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <div class="detail-text">
+                            <span class="detail-label">ທີ່ຢູ່</span>
+                            <p>ບ້ານແອກຊ້າງ, ເມືອງໂພນໂຮງ, ແຂວງວຽງຈັນ, ລາວ</p>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="quick-action">
-                <div class="icon">🛡️</div>
-                <div>ຮັບປະກັນ</div>
+            
+            <!-- Bio Section -->
+            <div class="bio-section animate-fade-in delay-2">
+                <h3 class="section-title">ປະຫວັດສ່ວນຕົວ</h3>
+                <div class="bio-content">
+                    <p>ຂ້າພະເຈົ້າມີຄວາມສົນໃຈໃນການພັດທະນາເວັບໄຊທ໌ ແລະ ມີຄວາມມຸ່ງຫວັງທີ່ຈະສ້າງເຄື່ອງມືທີ່ເປັນປະໂຫຍດຕໍ່ສັງຄົມລາວ. ຂ້າພະເຈົ້າມີປະສົບການໃນການພັດທະນາເວັບໄຊທ໌ມາເປັນເວລາຫຼາຍປີ ແລະ ມີຄວາມຮັກໃນການສ້າງສິ່ງທີ່ເປັນປະໂຫຍດຕໍ່ສັງຄົມ.</p>
+                    
+                    <h3 class="section-title" style="margin-top: 30px;">ຜູ້ສ້າງເວັບໄຊທ໌ Lao Karaoke</h3>
+                    <p>ຂ້າພະເຈົ້າເປັນຜູ້ພັດທະນາ ແລະ ສ້າງເວັບໄຊທ໌ <span class="highlight">Lao Karaoke</span> ທີ່ເປັນເວັບໄຊທ໌ແປພາສາລາວເປັນພາສາຄາຣາໂອເກະ ແລະ ແປພາສາຄາຣາໂອເກະເປັນພາສາລາວ. ເວັບໄຊທ໌ນີ້ຖືກອອກແບບມາເພື່ອຊ່ວຍໃຫ້ຜູ້ໃຊ້ສາມາດແປພາສາລາວເປັນພາສາຄາຣາໂອເກະໄດ້ຢ່າງງ່າຍດາຍ ແລະ ສະດວກສະບາຍ.</p>
+                    
+                    <p>ໂດຍມີຄວາມຕັ້ງໃຈທີ່ຈະສ້າງເຄື່ອງມືທີ່ເປັນປະໂຫຍດຕໍ່ສັງຄົມລາວ, ຂ້າພະເຈົ້າຈຶ່ງໄດ້ພັດທະນາເວັບໄຊທ໌ນີ້ຂຶ້ນມາ ເພື່ອຊ່ວຍໃຫ້ຜູ້ໃຊ້ສາມາດສື່ສານພາສາລາວໄດ້ຢ່າງມ່ວນຊື່ນ ແລະ ເຂົ້າໃຈງ່າຍຂຶ້ນ.</p>
+                </div>
+            </div>
+            
+            <!-- Gallery Section -->
+            <div class="gallery-section animate-fade-in delay-3">
+                <h3 class="section-title">ຮູບພາບ</h3>
+                <div class="gallery-grid">
+                    <div class="gallery-item">
+                        <img src="WhatsApp Image 2025-10-12 at 23.28.06_7ba632be.jpg" alt="รูปภาพส่วนตัว" class="gallery-image">
+                        <div class="gallery-caption">
+                            <h4>ຮູບສ່ວນຕົວ</h4>
+                            <p>"ດູຮູບພາບຂອງຂ້ອຍ!"</p>
+                        </div>
+                    </div>
+                    
+                    <div class="gallery-item">
+                        <img src="image.png" alt="โลโก้ Lao Karaoke" class="gallery-image">
+                        <div class="gallery-caption">
+                            <h4>ໂລໂກ້ Lao Karaoke</h4>
+                            <p>ໂລໂກ້ເວັບໄຊທ໌</p>
+                        </div>
+                    </div>
+                    
+                    <div class="gallery-item">
+                        <img src="523369542_122100142166956663_779428295355034840_n.jpg" alt="รูปภาพเพิ่มเติม" class="gallery-image">
+                        <div class="gallery-caption">
+                            <h4>ຮູບພາບການພັດທະນາ</h4>
+                            <p>ຂະບວນການສ້າງເວັບໄຊທ໌</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-
-        <!-- Services Section -->
-        <section id="services">
-            <h2 class="section-title">ບໍລິການຂອງພວກເຮົາ</h2>
-            <div class="services">
-                <div class="service-card">
-                    <h3>🛒 ຮັບສັ່ງຊື້ສິນຄ້າ</h3>
-                    <div class="content">
-                        <p>ພວກເຮົາຮັບສັ່ງຊື້ສິນຄ້າຈາກ Lazada ໃຫ້ທ່ານ</p>
-                        <ul>
-                            <li>ຄົ້ນຫາສິນຄ້າຕາມທີ່ທ່ານຕ້ອງການ</li>
-                            <li>ປຽບທຽບລາຄາ ແລະ ຄຸນນະພາບ</li>
-                            <li>ສັ່ງຊື້ສິນຄ້າໃນນາມຂອງທ່ານ</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="service-card">
-                    <h3>🚚 ຈັດສົ່ງເຖິງຂົນສົ່ງທີ່ທ່ານເລືອກ</h3>
-                    <div class="content">
-                        <p>ພວກເຮົາຈັດສົ່ງສິນຄ້າເຖິງຂົນສົ່ງທີ່ທ່ານເລືອກ</p>
-                        <ul>
-                            <li>ຮັບສິນຄ້າຈາກ Lazada</li>
-                            <li>ກວດສອບຄວາມສົມບູນ</li>
-                            <li>ຈັດສົ່ງເຖິງທີ່ຢູ່ຂອງທ່ານ</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- How It Works -->
-        <section id="how-it-works">
-            <h2 class="section-title">ວິທີການໃຊ້ບໍລິການ</h2>
-            <div class="steps">
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <h3>ສົ່ງລິ້ງສິນຄ້າ</h3>
-                    <p>ສົ່ງລິ້ງສິນຄ້າຈາກ Lazada ທີ່ທ່ານຕ້ອງການຊື້</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <h3>ຢືນຢັນຄໍາສັ່ງຊື້</h3>
-                    <p>ພວກເຮົາຕອບກັບພ້ອມລາຍລະອຽດ</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <h3>ຊໍາລະເງິນ</h3>
-                    <p>ຊໍາລະເງິນຜ່ານຊ່ອງທາງທີ່ກໍານົດ</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">4</div>
-                    <h3>ຮັບສິນຄ້າ</h3>
-                    <p>ລໍຖ້າຮັບສິນຄ້າທີ່ຂົນສົ່ງທີ່ທ່ານເລືອກ</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- CTA Section -->
-        <section class="cta-section">
-            <h2>ພ້ອມສັ່ງຊື້ສິນຄ້າແລ້ວບໍ?</h2>
-            <p>ພວກເຮົາພ້ອມໃຫ້ບໍລິການທ່ານ</p>
-            <a href="#contact" class="cta-button">ເລີ່ມຕົ້ນສັ່ງຊື້ດຽວນີ້</a>
-        </section>
-
-        <!-- Pricing -->
-        <section id="pricing">
-            <h2 class="section-title">ອັດຕາຄ່າບໍລິການ</h2>
-            <div class="pricing-cards">
-                <div class="pricing-card">
-                    <h3>ບໍລິການພື້ນຖານ</h3>
-                    <div class="content">
-                        <div class="price">10%</div>
-                        <ul>
-                            <li>ຂັ້ນຕໍາ 300.000 ກີບ</li>
-                            <li>ຈັດສົ່ງ 16-17 ວັນ</li>
-                            <li>ຮັບປະກັນຄຸນນະພາບ</li>
-                        </ul>
-                    </div>
-                </div>
-             
-        </section>
-
-        <!-- Contact Form -->
-        <section id="contact">
-            <h2 class="section-title">ຕິດຕໍ່ສັ່ງຊື້</h2>
-            <div class="contact-form">
-                <form id="orderForm">
-                    <div class="form-group">
-                        <label for="name">ຊື່-ນາມສະກຸນ</label>
-                        <input type="text" id="name" name="name" required placeholder="ປ້ອນຊື່ ແລະ ນາມສະກຸນ">
-                    </div>
-                    <div class="form-group">
-                        <label for="phone">ເບີໂທລະສັບ</label>
-                        <input type="tel" id="phone" name="phone" required placeholder="020 XXXXXXXX">
-                    </div>
-                    <div class="form-group">
-                        <label for="product-url">ລິ້ງສິນຄ້າ Lazada</label>
-                        <input type="url" id="product-url" name="product-url" required placeholder="https://www.lazada.co.th/...">
-                    </div>
-                    <button type="submit" class="submit-btn">
-                        <i class="fas fa-paper-plane"></i> ສົ່ງຄໍາສັ່ງຊື້
-                    </button>
-                </form>
-            </div>
-        </section>
+        
+        <div class="back-btn-container">
+            <a href="index.html" class="back-btn">
+                <i class="fas fa-arrow-left"></i> ກັບໄປຫນ້າຫລັກ
+            </a>
+        </div>
     </div>
 
-    <!-- Footer -->
-    <footer>
-        <div class="footer-logo">LAZAORDER</div>
-        <p>ບໍລິການຮັບສັ່ງສິນຄ້າຈາກ Lazada</p>
-        
-        <div class="social-links">
-            <a href="#"><i class="fab fa-facebook"></i></a>
-            <a href="#"><i class="fab fa-line"></i></a>
-            <a href="#"><i class="fab fa-instagram"></i></a>
-        </div>
-
-        <div class="contact-info">
-            <p><i class="fas fa-phone"></i> 02056477479</p>
-            <p><i class="fas fa-envelope"></i> contact@lazaorder.com</p>
-        </div>
-
-        <p>© 2024 LAZAORDER. สະຫງວດລິຂະສິດ.</p>
-    </footer>
-
-    <!-- Floating Action Buttons -->
-    <a href="tel:0201234567" class="fab">
-        <i class="fas fa-phone"></i>
-    </a>
-
-    <a href="https://line.me/ti/p/~lazaorder" class="whatsapp-chat">
-        <i class="fab fa-line"></i>
-    </a>
-
     <script>
-        // Form submission
-        document.getElementById('orderForm').addEventListener('submit', function(e) {
-            e.preventDefault();
+        // Add scroll animation
+        document.addEventListener('DOMContentLoaded', function() {
+            const animatedElements = document.querySelectorAll('.animate-fade-in');
             
-            // Show success message
-            alert('ຂໍຂອບໃຈ! ພວກເຮົາໄດ້ຮັບຄໍາສັ່ງຊື້ຂອງທ່ານແລ້ວ. ພວກເຮົາຈະຕິດຕໍ່ຫາທ່ານໃນທັນທີ.');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.animationPlayState = 'running';
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
             
-            // Reset form
-            this.reset();
-        });
-
-        // Smooth scroll for navigation
-        document.querySelectorAll('.nav-menu a').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const targetId = this.getAttribute('href');
-                const targetElement = document.querySelector(targetId);
-                
-                if (targetElement) {
-                    targetElement.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                    
-                    // Close mobile menu after click
-                    document.getElementById('nav-toggle').checked = false;
-                }
-            });
-        });
-
-        // Add loading animation to buttons
-        document.querySelectorAll('button, .cta-button').forEach(button => {
-            button.addEventListener('click', function() {
-                this.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    this.style.transform = 'scale(1)';
-                }, 150);
+            animatedElements.forEach(el => {
+                el.style.animationPlayState = 'paused';
+                observer.observe(el);
             });
         });
     </script>
