@@ -846,8 +846,12 @@
         <button class="dir-tab active" id="tab-lk" onclick="setDir('lao-to-karaoke')">🇱🇦 ລາວ → Karaoke</button>
         <button class="dir-tab" id="tab-kl" onclick="setDir('karaoke-to-lao')">Karaoke → 🇱🇦 ລາວ</button>
       </div>
-      <textarea class="text-input" id="inputText"
-        placeholder="ພິມຂໍ້ຄວາມທີ່ນີ້... (Ctrl+Enter ເພື່ອແປ)"></textarea>
+      <textarea class="text-input" id="inputText" maxlength="2000"
+        placeholder="ພິມຂໍ້ຄວາມທີ່ນີ້... (Ctrl+Enter ເພື່ອແປ)"
+        oninput="updateCharCount()"></textarea>
+      <div style="text-align:right;font-size:.75rem;color:var(--muted);margin-top:4px">
+        <span id="char-count">0</span> / 2,000
+      </div>
       <div class="btn-row">
         <button class="btn btn-primary" id="translateBtn" onclick="translateText()">🔄 ແປພາສາ</button>
         <button class="btn btn-ghost" onclick="clearText()">✕ ລ້າງ</button>
@@ -966,6 +970,12 @@
     <!-- Social -->
     <div class="settings-card">
       <div class="settings-title">ຕິດຕາມພວກເຮົາ</div>
+      <div class="settings-item" onclick="window.open('https://www.youtube.com/@GIRLLAO-6665','_blank')">
+        <div class="settings-item-left">
+          <div class="s-icon" style="background:rgba(255,0,0,.1)">▶</div>
+          <div><div class="s-label">YouTube</div><div class="s-sub">@GIRLLAO-6665</div></div>
+        </div>
+        <span class="s-arrow">↗</span>
       </div>
       <div class="settings-sep"></div>
       <div class="settings-item" onclick="window.open('https://www.facebook.com/share/1CbJTRfNMc/','_blank')">
@@ -1501,7 +1511,7 @@ async function sendPaymentConfirm() {
 
 // ══ TRANSLATOR ═══════════════════════════════════════════════════════════════
 const karaokeToLaoMap = {
-  "ຊໍ່າ": "sam",
+"ຊໍ່າ": "sam",
 		   "ເບີງ": "bg",
 	   "ເບີ່ງ": "bg",
 	   "ເບິງ": "bg",
@@ -7966,28 +7976,52 @@ const karaokeToLaoMap = {
 };
 const laoToKaraokeMap = {};
 Object.entries(karaokeToLaoMap).forEach(([k,v]) => { if(!laoToKaraokeMap[v]) laoToKaraokeMap[v]=k; });
-laoToKaraokeMap["ຊໍ່າ"]="sam"; laoToKaraokeMap["ເບີງ"]="bg";
-laoToKaraokeMap["ເຮັດ"]="h";   laoToKaraokeMap["ຍັງ"]="y";
+laoToKaraokeMap["ຊ຿່ົ"]="sam"; laoToKaraokeMap["ເບີງ"]="bg";
+laoToKaraokeMap["ເຮັດ"]="h";   laoToKaraokeMap["ໍັງ"]="y";
 laoToKaraokeMap["ຢູ່"]="u";    laoToKaraokeMap["ຊິ"]="c";
 laoToKaraokeMap["ໂມງ"]="m";   laoToKaraokeMap["ເຄ"]="k";
 
+// Pre-sort keys ONCE at startup (longest-first) so translate() never re-sorts
+const _sortedKL = Object.keys(karaokeToLaoMap).sort((a,b) => b.length - a.length);
+const _sortedLK = Object.keys(laoToKaraokeMap).sort((a,b) => b.length - a.length);
+const _maxKL    = _sortedKL[0]?.length || 1;
+const _maxLK    = _sortedLK[0]?.length || 1;
+
 function translate(text, dir) {
   if (!text.trim()) return '';
-  const map  = dir==='lao-to-karaoke' ? laoToKaraokeMap : karaokeToLaoMap;
-  const keys = Object.keys(map).sort((a,b) => b.length - a.length);
-  const lower = text.toLowerCase();
-  const results = []; let i = 0;
-  while (i < lower.length) {
-    if (/\s/.test(lower[i])) { if(dir==='lao-to-karaoke') results.push(' '); i++; continue; }
+  const isLK   = dir === 'lao-to-karaoke';
+  const map    = isLK ? laoToKaraokeMap : karaokeToLaoMap;
+  const keys   = isLK ? _sortedLK       : _sortedKL;
+  const maxLen = isLK ? _maxLK          : _maxKL;
+  const lower  = text.toLowerCase();
+  const len    = lower.length;
+  const results = [];
+  let i = 0;
+  while (i < len) {
+    const ch = lower[i];
+    // Fast-path whitespace
+    if (ch === ' ' || ch === '\n' || ch === '\r' || ch === '\t') {
+      if (isLK) results.push(' ');
+      i++; continue;
+    }
+    const cap = Math.min(maxLen, len - i);
     let matched = false;
-    for (const k of keys) {
-      if (lower.substring(i, i+k.length) === k) {
-        results.push(map[k]); i += k.length; matched = true; break;
+    for (let ki = 0; ki < keys.length; ki++) {
+      const k = keys[ki];
+      if (k.length > cap) continue;
+      if (k[0] !== ch)    continue;  // first-char pre-check
+      if (lower.substring(i, i + k.length) === k) {
+        results.push(map[k]);
+        i += k.length;
+        matched = true;
+        break;
       }
     }
-    if (!matched) { results.push(lower[i]); i++; }
+    if (!matched) { results.push(ch); i++; }
   }
-  return dir==='lao-to-karaoke' ? results.join(' ').replace(/\s+/g,' ').trim() : results.join('');
+  return isLK
+    ? results.join(' ').replace(/\s+/g, ' ').trim()
+    : results.join('');
 }
 
 function setDir(d) {
@@ -8000,6 +8034,9 @@ function setDir(d) {
     d==='lao-to-karaoke' ? 'ຜົນ Karaoke' : 'ຜົນພາສາລາວ';
 }
 
+// Debounce timer for live-translate (not used directly, but kept for future)
+let _translateTimer = null;
+
 function translateText() {
   if (!canTranslate()) {
     document.getElementById('limit-banner').classList.add('show');
@@ -8007,22 +8044,59 @@ function translateText() {
   }
   const input = document.getElementById('inputText').value.trim();
   if (!input) return;
+
   const output = document.getElementById('output');
+  const copyBtn = document.getElementById('copyBtn');
   output.innerHTML = '<span style="color:var(--muted)">ກຳລັງແປ...</span>';
-  document.getElementById('copyBtn').style.display = 'none';
-  setTimeout(() => {
+  copyBtn.style.display = 'none';
+
+  // Guard: cap at 2000 chars
+  if (input.length > 2000) {
+    output.textContent = '⚠️ ຂໍ້ຄວາມຍາວເກີນໄປ (ສູງສຸດ 2,000 ຕົວ)';
+    return;
+  }
+
+  // Disable button during translation to prevent double-clicks
+  const tBtn = document.getElementById('translateBtn');
+  if (tBtn) tBtn.disabled = true;
+
+  // Yield to browser to paint "ກຳລັງແປ..." before doing CPU work
+  const run = () => {
     const result = translate(input, direction);
     output.textContent = result || '(ບໍ່ພົບຄຳແປ)';
     output.style.color = '';
-    document.getElementById('copyBtn').style.display = result ? '' : 'none';
-    incUsage(); // async, non-blocking
-  }, 200);
+    copyBtn.style.display = result ? '' : 'none';
+    incUsage();
+    if (tBtn && !isPremium) {
+      const u = getUsage();
+      tBtn.disabled = u >= FREE_LIMIT;
+    } else if (tBtn) {
+      tBtn.disabled = false;
+    }
+  };
+
+  // Use requestIdleCallback when available, else minimal setTimeout
+  if (typeof requestIdleCallback !== 'undefined') {
+    requestIdleCallback(run, { timeout: 800 });
+  } else {
+    setTimeout(run, 16);
+  }
+}
+
+function updateCharCount() {
+  const len = document.getElementById('inputText').value.length;
+  const el  = document.getElementById('char-count');
+  if (el) {
+    el.textContent = len.toLocaleString();
+    el.style.color = len > 1800 ? 'var(--danger)' : len > 1400 ? 'var(--gold)' : 'var(--muted)';
+  }
 }
 
 function clearText() {
   document.getElementById('inputText').value = '';
   document.getElementById('output').innerHTML = '<span class="output-placeholder">ຜົນການແປຈະປະກົດທີ່ນີ້...</span>';
   document.getElementById('copyBtn').style.display = 'none';
+  updateCharCount();
 }
 
 function copyOutput() {
