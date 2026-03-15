@@ -1017,10 +1017,8 @@ const auth = firebase.auth();
 const db   = firebase.firestore();
 
 // ══ CONSTANTS ══════════════════════════════════════════════════════════════
-const FREE_LIMIT     = 10;
-const USAGE_KEY      = 'lk_usage';
-const DATE_KEY       = 'lk_date';
-const WHATSAPP_NUM   = '2029988148';
+const FREE_LIMIT   = 10;
+const WHATSAPP_NUM = '2029988148';
 const PLANS = {
   monthly: { label:'1 ເດືອນ', price:20000,  priceStr:'20,000',  pill:'💰 20,000 ກີບ / ເດືອນ' },
   yearly:  { label:'1 ປີ',    price:200000, priceStr:'200,000', pill:'💰 200,000 ກີບ / ປີ'   }
@@ -1029,34 +1027,102 @@ const PLANS = {
 let currentUser  = null;
 let isPremium    = false;
 let premiumUntil = null;
+let firestoreUsage = 0;   // usage from Firestore (for logged-in users)
 let currentMode  = 'login';
 let direction    = 'lao-to-karaoke';
 let selectedPlan = 'monthly';
 let currentPage  = 'home';
 
-// ══ DAILY USAGE ════════════════════════════════════════════════════════════
-function getUsage() {
-  const today = new Date().toDateString();
-  if (localStorage.getItem(DATE_KEY) !== today) {
-    localStorage.setItem(USAGE_KEY, '0');
-    localStorage.setItem(DATE_KEY, today);
+// ══ FIRESTORE USAGE (for logged-in users) ══════════════════════════════════
+// Firestore schema: users/{uid} = { isPremium, usageCount, lastReset, premiumUntil? }
+
+async function loadUserDoc(uid) {
+  try {
+    const doc = await db.collection('users').doc(uid).get();
+    if (doc.exists) {
+      const d = doc.data();
+      // isPremium field (direct boolean OR premiumUntil date)
+      if (d.isPremium === true) {
+        isPremium = true;
+      }
+      if (d.premiumUntil) {
+        const until = d.premiumUntil.toDate ? d.premiumUntil.toDate() : new Date(d.premiumUntil);
+        if (until > new Date()) { isPremium = true; premiumUntil = until; }
+        else { isPremium = false; }
+      }
+      // Usage — reset daily
+      const today = new Date().toDateString();
+      const lastReset = d.lastReset || '';
+      if (lastReset !== today) {
+        firestoreUsage = 0;
+        // Reset in Firestore
+        await db.collection('users').doc(uid).set(
+          { usageCount: 0, lastReset: today },
+          { merge: true }
+        );
+      } else {
+        firestoreUsage = d.usageCount || 0;
+      }
+    } else {
+      // New user — create doc
+      const today = new Date().toDateString();
+      await db.collection('users').doc(uid).set({
+        isPremium: false,
+        usageCount: 0,
+        lastReset: today,
+        email: currentUser.email || '',
+        displayName: currentUser.displayName || '',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      firestoreUsage = 0;
+    }
+  } catch(e) {
+    console.warn('Firestore loadUserDoc error:', e);
+    firestoreUsage = 0;
   }
-  return parseInt(localStorage.getItem(USAGE_KEY) || '0');
 }
-function incUsage() {
-  localStorage.setItem(USAGE_KEY, String(getUsage() + 1));
+
+function getUsage() {
+  if (currentUser) return firestoreUsage;
+  // Guest: localStorage
+  const today = new Date().toDateString();
+  const dk = 'lk_date', uk = 'lk_usage';
+  if (localStorage.getItem(dk) !== today) {
+    localStorage.setItem(uk, '0');
+    localStorage.setItem(dk, today);
+  }
+  return parseInt(localStorage.getItem(uk) || '0');
+}
+
+async function incUsage() {
+  if (isPremium) return;
+  if (currentUser) {
+    firestoreUsage = Math.min(firestoreUsage + 1, 999);
+    try {
+      await db.collection('users').doc(currentUser.uid).set(
+        { usageCount: firestoreUsage, lastReset: new Date().toDateString() },
+        { merge: true }
+      );
+    } catch(e) { console.warn('incUsage error:', e); }
+  } else {
+    const uk = 'lk_usage';
+    localStorage.setItem(uk, String(getUsage() + 1));
+  }
   renderUsageBar();
   if (currentPage === 'profile') renderProfilePage();
 }
+
 function canTranslate() {
   if (isPremium) return true;
   return getUsage() < FREE_LIMIT;
 }
+
 function renderUsageBar() {
   if (isPremium) {
     document.getElementById('usage-banner').classList.add('hidden');
     document.getElementById('limit-banner').classList.remove('show');
-    document.getElementById('translateBtn').disabled = false;
+    const tb = document.getElementById('translateBtn');
+    if (tb) tb.disabled = false;
     return;
   }
   const u   = getUsage();
@@ -1068,7 +1134,8 @@ function renderUsageBar() {
   fill.style.width = pct + '%';
   fill.classList.toggle('warn', u >= FREE_LIMIT);
   document.getElementById('limit-banner').classList.toggle('show', u >= FREE_LIMIT);
-  document.getElementById('translateBtn').disabled = u >= FREE_LIMIT;
+  const tb = document.getElementById('translateBtn');
+  if (tb) tb.disabled = u >= FREE_LIMIT;
 }
 
 // ══ AUTH STATE ═════════════════════════════════════════════════════════════
@@ -1076,18 +1143,11 @@ auth.onAuthStateChanged(async user => {
   currentUser  = user;
   isPremium    = false;
   premiumUntil = null;
+  firestoreUsage = 0;
 
   if (user) {
-    try {
-      const doc = await db.collection('users').doc(user.uid).get();
-      if (doc.exists) {
-        const d = doc.data();
-        if (d.premiumUntil) {
-          const until = d.premiumUntil.toDate ? d.premiumUntil.toDate() : new Date(d.premiumUntil);
-          if (until > new Date()) { isPremium = true; premiumUntil = until; }
-        }
-      }
-    } catch(e) {}
+    // Load Firestore doc (sets isPremium, firestoreUsage)
+    await loadUserDoc(user.uid);
   }
 
   updateNavUI(user);
@@ -1109,9 +1169,8 @@ function updateNavUI(user) {
   const out = document.getElementById('nav-out');
   const inn = document.getElementById('nav-in');
   if (user) {
-    out.style.display  = 'none';
-    inn.style.display  = 'flex';
-    // Premium pill
+    out.style.display = 'none';
+    inn.style.display = 'flex';
     const ps = document.getElementById('nav-premium-status');
     if (isPremium) {
       ps.innerHTML = '<span class="nav-premium-active">👑 Premium</span>';
@@ -1129,10 +1188,9 @@ function showPage(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
   currentPage = page;
-  // Nav profile button active state
   const pb = document.getElementById('btn-profile-tab');
   if (pb) pb.classList.toggle('active', page === 'profile');
-  window.scrollTo({ top:0, behavior:'smooth' });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
   if (page === 'profile') renderProfilePage();
 }
 
@@ -1141,6 +1199,7 @@ function getInitials(name) {
   if (!name) return '?';
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2);
 }
+
 function renderProfilePage() {
   if (!currentUser) return;
   const u = currentUser;
@@ -1154,9 +1213,7 @@ function renderProfilePage() {
   }
   document.getElementById('p-name').textContent  = u.displayName || u.email || '—';
   document.getElementById('p-email').textContent = u.email || '—';
-
-  // Premium badge on avatar
-  document.getElementById('p-badge-img').style.display = isPremium ? '' : 'none';
+  document.getElementById('p-badge-img').style.display  = isPremium ? '' : 'none';
   document.getElementById('p-premium-tag').style.display = isPremium ? '' : 'none';
 
   // Plan card
@@ -1165,19 +1222,18 @@ function renderProfilePage() {
     const expStr = premiumUntil
       ? `ໃຊ້ໄດ້ຈົນ ${premiumUntil.toLocaleDateString('lo-LA',{year:'numeric',month:'long',day:'numeric'})}`
       : 'ໃຊ້ໄດ້ບໍ່ຈຳກັດ';
-    document.getElementById('p-plan-desc').textContent = expStr;
+    document.getElementById('p-plan-desc').textContent   = expStr;
     document.getElementById('p-active-tag').style.display   = '';
     document.getElementById('p-free-section').style.display = 'none';
     document.getElementById('p-usage-wrap').style.display   = 'none';
   } else {
-    document.getElementById('p-plan-name').textContent = 'Free Plan';
+    const u2  = getUsage();
+    const pct = Math.min(Math.round(u2 / FREE_LIMIT * 100), 100);
+    document.getElementById('p-plan-name').textContent  = 'Free Plan';
+    document.getElementById('p-plan-desc').textContent  = `ໃຊ້ໄປ ${u2} / ${FREE_LIMIT} ຄັ້ງວັນນີ້`;
     document.getElementById('p-active-tag').style.display   = 'none';
     document.getElementById('p-free-section').style.display = '';
     document.getElementById('p-usage-wrap').style.display   = '';
-
-    const u2  = getUsage();
-    const pct = Math.min(Math.round(u2 / FREE_LIMIT * 100), 100);
-    document.getElementById('p-plan-desc').textContent  = `ໃຊ້ໄປ ${u2} / ${FREE_LIMIT} ຄັ້ງວັນນີ້`;
     document.getElementById('p-usage-text').textContent = `${u2} / ${FREE_LIMIT} ຄັ້ງ`;
 
     const fill = document.getElementById('p-usage-fill');
@@ -1186,11 +1242,11 @@ function renderProfilePage() {
 
     const msg = document.getElementById('p-usage-msg');
     if (u2 >= FREE_LIMIT) {
-      msg.style.display = ''; msg.textContent = '✕ ໃຊ້ຄົບໂຄຕ້າວັນນີ້ແລ້ວ';
-      msg.className = 'p-usage-msg full';
+      msg.style.display = ''; msg.className = 'p-usage-msg full';
+      msg.textContent = '✕ ໃຊ້ຄົບໂຄຕ້າວັນນີ້ແລ້ວ';
     } else if (u2 >= FREE_LIMIT * .8) {
-      msg.style.display = ''; msg.textContent = '⚠️ ໃກ້ຮອດຂີດຈຳກັດແລ້ວ!';
-      msg.className = 'p-usage-msg near';
+      msg.style.display = ''; msg.className = 'p-usage-msg near';
+      msg.textContent = '⚠️ ໃກ້ຮອດຂີດຈຳກັດແລ້ວ!';
     } else {
       msg.style.display = 'none';
     }
@@ -1200,7 +1256,7 @@ function renderProfilePage() {
 // ══ SEND SLIP VIA WHATSAPP (from Profile) ════════════════════════════════
 function handleSendSlipWA() {
   if (!currentUser) return;
-  const u   = currentUser;
+  const u    = currentUser;
   const plan = PLANS[selectedPlan];
   const now  = new Date();
   const msg  = encodeURIComponent(
@@ -1219,7 +1275,7 @@ function handleSendSlipWA() {
   window.open(`https://wa.me/${WHATSAPP_NUM}?text=${msg}`, '_blank');
 }
 
-// ══ AUTH FUNCTIONS ══════════════════════════════════════════════════════════
+// ══ AUTH HELPERS ════════════════════════════════════════════════════════════
 async function wallSignInGoogle() {
   const btn = document.getElementById('btn-wall-google');
   const txt = document.getElementById('wall-google-text');
@@ -1227,16 +1283,16 @@ async function wallSignInGoogle() {
   try {
     await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
   } catch(e) {
-    if (e.code === 'auth/popup-blocked') alert('ກະລຸນາ allow popup');
+    if (e.code === 'auth/popup-blocked') alert('ກະລຸນາ allow popup ສຳລັບໜ້ານີ້');
     else if (e.code !== 'auth/popup-closed-by-user') alert(parseError(e.code));
   } finally {
     btn.disabled = false; txt.textContent = 'ເຂົ້າດ້ວຍ Google';
   }
 }
+
 async function signInWithGoogle() {
   const btn = document.getElementById('btn-google');
-  btn.disabled = true;
-  clearError();
+  btn.disabled = true; clearError();
   try {
     await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
     closeModal();
@@ -1246,12 +1302,14 @@ async function signInWithGoogle() {
     btn.disabled = false;
   }
 }
+
 function handleLogout() {
   if (confirm('ອອກຈາກລະບົບ?')) auth.signOut().then(() => showPage('home'));
 }
+
 async function handleSubmit() {
   clearError();
-  const email    = document.getElementById('inp-email').value.trim();
+  const email   = document.getElementById('inp-email').value.trim();
   const password = document.getElementById('inp-password').value;
   const confirm  = document.getElementById('inp-confirm').value;
   const name     = document.getElementById('inp-name').value.trim();
@@ -1278,15 +1336,21 @@ async function handleSubmit() {
     showError(parseError(e.code));
   } finally {
     btn.disabled = false;
-    btn.textContent = currentMode === 'login' ? 'ເຂົ້າສູ່ລະບົບ'
-      : currentMode === 'register' ? 'ສ້າງບັນຊີ' : 'ສົ່ງ Email Reset';
+    btn.textContent = currentMode==='login' ? 'ເຂົ້າສູ່ລະບົບ'
+      : currentMode==='register' ? 'ສ້າງບັນຊີ' : 'ສົ່ງ Email Reset';
   }
 }
+
 function parseError(code) {
-  return ({ 'auth/user-not-found':'ບໍ່ພົບບັນຊີ','auth/wrong-password':'ລະຫັດຜ່ານຜິດ',
-    'auth/invalid-email':'ອີເມວບໍ່ຖືກຮູບແບບ','auth/email-already-in-use':'ອີເມວຖືກໃຊ້ແລ້ວ',
-    'auth/weak-password':'ລະຫັດຕ້ອງ 6 ຕົວຂຶ້ນໄປ','auth/too-many-requests':'ພະຍາຍາມຫຼາຍ ລອງໃໝ່ພາຍຫຼັງ',
-    'auth/invalid-credential':'ອີເມວ ຫຼື ລະຫັດຜ່ານຜິດ','auth/popup-blocked':'Browser block popup'
+  return ({
+    'auth/user-not-found':     'ບໍ່ພົບບັນຊີ',
+    'auth/wrong-password':     'ລະຫັດຜ່ານຜິດ',
+    'auth/invalid-email':      'ອີເມວບໍ່ຖືກຮູບແບບ',
+    'auth/email-already-in-use':'ອີເມວຖືກໃຊ້ແລ້ວ',
+    'auth/weak-password':      'ລະຫັດຕ້ອງ 6 ຕົວຂຶ້ນໄປ',
+    'auth/too-many-requests':  'ພະຍາຍາມຫຼາຍ ລອງໃໝ່ພາຍຫຼັງ',
+    'auth/invalid-credential': 'ອີເມວ ຫຼື ລະຫັດຜ່ານຜິດ',
+    'auth/popup-blocked':      'Browser block popup — ກະລຸນາ allow'
   })[code] || 'ເກີດຂໍ້ຜິດພາດ ກະລຸນາລອງໃໝ່';
 }
 
@@ -1294,13 +1358,13 @@ function parseError(code) {
 function openModal(mode = 'login') {
   switchMode(mode);
   document.getElementById('modal-overlay').classList.add('open');
-  setTimeout(() => document.getElementById('inp-email').focus(), 100);
+  setTimeout(() => document.getElementById('inp-email').focus(), 120);
 }
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
   clearError();
   ['inp-email','inp-password','inp-confirm','inp-name'].forEach(id => {
-    const el = document.getElementById(id); if(el) el.value = '';
+    const el = document.getElementById(id); if (el) el.value = '';
   });
 }
 function closeModalOutside(e) {
@@ -1312,30 +1376,30 @@ function switchMode(mode) {
   const isL = mode==='login', isR = mode==='register', isF = mode==='forgot';
   document.getElementById('modal-title').textContent = isL?'ເຂົ້າສູ່ລະບົບ':isR?'ສ້າງບັນຊີ':'ລືມລະຫັດຜ່ານ';
   document.getElementById('modal-sub').textContent   = isL?'ຍິນດີຕ້ອນຮັບ 👋':isR?'ສ້າງບັນຊີໃໝ່':'ກຣອກ email ເພື່ອ reset';
-  document.getElementById('btn-google').style.display      = isF?'none':'';
-  document.getElementById('modal-divider').style.display   = isF?'none':'';
-  document.getElementById('field-name').style.display      = isR?'':'none';
-  document.getElementById('field-password').style.display  = isF?'none':'';
-  document.getElementById('field-confirm').style.display   = isR?'':'none';
-  document.getElementById('forgot-link').style.display     = isL?'':'none';
-  const btn = document.getElementById('btn-submit');
-  btn.textContent = isL?'ເຂົ້າສູ່ລະບົບ':isR?'ສ້າງບັນຊີ':'ສົ່ງ Email Reset';
+  document.getElementById('btn-google').style.display      = isF ? 'none' : '';
+  document.getElementById('modal-divider').style.display   = isF ? 'none' : '';
+  document.getElementById('field-name').style.display      = isR ? '' : 'none';
+  document.getElementById('field-password').style.display  = isF ? 'none' : '';
+  document.getElementById('field-confirm').style.display   = isR ? '' : 'none';
+  document.getElementById('forgot-link').style.display     = isL ? '' : 'none';
+  document.getElementById('btn-submit').textContent =
+    isL ? 'ເຂົ້າສູ່ລະບົບ' : isR ? 'ສ້າງບັນຊີ' : 'ສົ່ງ Email Reset';
   document.getElementById('modal-switch').innerHTML = isF
     ? `<a onclick="switchMode('login')">← ກັບໄປ Login</a>`
     : isL
     ? `ຍັງບໍ່ມີບັນຊີ? <a onclick="switchMode('register')">ລົງທະບຽນ</a>`
     : `ມີບັນຊີແລ້ວ? <a onclick="switchMode('login')">ເຂົ້າສູ່ລະບົບ</a>`;
-  document.getElementById('google-btn-text').textContent = isR?'ລົງທະບຽນດ້ວຍ Google':'ເຂົ້າດ້ວຍ Google';
+  document.getElementById('google-btn-text').textContent = isR ? 'ລົງທະບຽນດ້ວຍ Google' : 'ເຂົ້າດ້ວຍ Google';
 }
 function showError(msg, type='err') {
   const el = document.getElementById('modal-error');
   el.textContent = msg; el.classList.add('show');
-  if(type==='ok') { el.style.background='#f0fff4';el.style.borderColor='#9ae6b4';el.style.color='#276749'; }
-  else { el.style.background='';el.style.borderColor='';el.style.color=''; }
+  if (type==='ok') { el.style.background='#f0fff4'; el.style.borderColor='#9ae6b4'; el.style.color='#276749'; }
+  else { el.style.background=''; el.style.borderColor=''; el.style.color=''; }
 }
 function clearError() {
   const el = document.getElementById('modal-error');
-  el.classList.remove('show'); el.textContent='';
+  el.classList.remove('show'); el.textContent = '';
 }
 
 // ══ PREMIUM MODAL ════════════════════════════════════════════════════════════
@@ -1354,14 +1418,15 @@ function selectPlan(p) {
   document.getElementById('ptab-monthly').classList.toggle('active', p==='monthly');
   document.getElementById('ptab-yearly').classList.toggle('active',  p==='yearly');
   const plan = PLANS[p];
-  document.getElementById('pm-amount').textContent         = plan.priceStr;
-  document.getElementById('pm-price-pill').textContent     = plan.pill;
-  document.getElementById('pm-step2-amount').textContent   = plan.priceStr + ' ກີບ';
+  document.getElementById('pm-amount').textContent       = plan.priceStr;
+  document.getElementById('pm-price-pill').textContent   = plan.pill;
+  document.getElementById('pm-step2-amount').textContent = plan.priceStr + ' ກີບ';
 }
 
 // Upload slip
 let pmSlipBase64 = null;
 let pmSlipName   = '';
+
 function handlePmSlip(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -1382,7 +1447,6 @@ function handlePmSlip(e) {
   reader.readAsDataURL(file);
 }
 
-// WhatsApp send (primary)
 function sendViaWhatsApp() {
   if (!currentUser || !pmSlipBase64) return;
   const u    = currentUser;
@@ -1398,13 +1462,13 @@ function sendViaWhatsApp() {
     `• ຈຳນວນ: ${plan.priceStr} ກີບ\n` +
     `• ວັນທີ: ${now.toLocaleDateString('lo-LA')}\n` +
     `• ເວລາ: ${now.toLocaleTimeString('lo-LA')}\n\n` +
-    `✅ ໂອນຜ່ານ BCEL One ແລ້ວ ·  Slip ຄັດຕໍ່ message ນີ້ 🙏`
+    `✅ ໂອນຜ່ານ BCEL One ແລ້ວ — Slip ຄັດຕໍ່ message ນີ້ 🙏`
   );
   window.open(`https://wa.me/${WHATSAPP_NUM}?text=${msg}`, '_blank');
   saveToFirestore('whatsapp');
   document.getElementById('pm-success').style.display = 'block';
-  document.getElementById('btn-wa-send').disabled    = true;
-  document.getElementById('btn-wa-send').textContent = '✅ ສົ່ງແລ້ວ — ລໍຖ້າ Admin';
+  const btn = document.getElementById('btn-wa-send');
+  btn.disabled = true; btn.textContent = '✅ ສົ່ງແລ້ວ — ລໍຖ້າ Admin';
 }
 
 async function saveToFirestore(source='direct') {
@@ -1416,10 +1480,11 @@ async function saveToFirestore(source='direct') {
       plan: selectedPlan, planLabel: PLANS[selectedPlan].label,
       price: PLANS[selectedPlan].price,
       slipImage: pmSlipBase64 || null, slipFileName: pmSlipName,
-      source, requestedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      source,
+      requestedAt: firebase.firestore.FieldValue.serverTimestamp(),
       status: 'pending'
     });
-  } catch(e) { console.warn('Firestore:', e); }
+  } catch(e) { console.warn('Firestore saveToFirestore:', e); }
 }
 
 async function sendPaymentConfirm() {
@@ -1461,7 +1526,7 @@ const karaokeToLaoMap = {
   "am":"ອຳ","an":"ອັນ","ang":"ອັງ","ong":"ອົງ","ing":"ອິງ",
   "ok":"ອົກ","ak":"ອັກ","ot":"ອົດ","at":"ອັດ","ap":"ອັບ",
   "o":"ໂອ","h":"ເຮັດ","k":"ເຄ","m":"ໂມງ","y":"ຍັງ",
-  "u":"ຢູ່","c":"ຊິ","r":"ອາ","a":"ອາ","e":"ເອ","i":"ອິ",
+  "u":"ຢູ່","c":"ຊິ","r":"ອາ","a":"ອາ","e":"ເອ","i":"ອິ"
 };
 const laoToKaraokeMap = {};
 Object.entries(karaokeToLaoMap).forEach(([k,v]) => { if(!laoToKaraokeMap[v]) laoToKaraokeMap[v]=k; });
@@ -1514,7 +1579,7 @@ function translateText() {
     output.textContent = result || '(ບໍ່ພົບຄຳແປ)';
     output.style.color = '';
     document.getElementById('copyBtn').style.display = result ? '' : 'none';
-    if (!isPremium) incUsage();
+    incUsage(); // async, non-blocking
   }, 200);
 }
 
@@ -1545,6 +1610,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape') { closeModal(); closePremiumModal(); }
   });
 });
+
 </script>
 </body>
 </html>
