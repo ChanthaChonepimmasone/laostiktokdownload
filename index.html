@@ -1,12 +1,1106 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Youware App</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lao Karaoke - ແປພາສາໂອເກະ</title>
+  <meta name="description" content="ເຄື່ອງມືແປພາສາລາວເປັນພາສາ Karaoke">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://chanthachonepimmasone.github.io/Laokaraoke/">
+  <meta property="og:title" content="Lao Karaoke - ແປພາສາໂອເກະ">
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --primary: #2c5282;
+      --primary-hover: #2a4a7f;
+      --primary-light: #ebf4ff;
+      --accent: #38a169;
+      --accent-hover: #2f855a;
+      --bg: #f0f4f8;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #1a202c;
+      --text-muted: #718096;
+      --danger: #e53e3e;
+      --warning-bg: #fffbeb;
+      --warning-border: #f6e05e;
+      --radius: 10px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary: #63b3ed;
+        --primary-hover: #90cdf4;
+        --primary-light: #1a2a3a;
+        --accent: #68d391;
+        --bg: #0f172a;
+        --surface: #1e293b;
+        --border: #334155;
+        --text: #f1f5f9;
+        --text-muted: #94a3b8;
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans Lao', 'Saysettha OT', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── NAV ── */
+    .nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-sm);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--primary);
+      text-decoration: none;
+    }
+    .nav-brand-icon {
+      width: 34px; height: 34px;
+      background: var(--primary);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; color: white; font-weight: 700;
+    }
+    .nav-right { display: flex; align-items: center; gap: 10px; }
+    .nav-user {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.88rem; color: var(--text-muted);
+    }
+    .nav-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--primary-light);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: var(--primary);
+      overflow: hidden;
+    }
+    .nav-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .btn-nav-login {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 7px 16px;
+      border-radius: 7px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s;
+    }
+    .btn-nav-login:hover { background: var(--primary-hover); }
+    .btn-nav-logout {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      padding: 6px 13px;
+      border-radius: 7px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+    .btn-nav-logout:hover { background: var(--border); }
+
+    /* ── MODAL OVERLAY ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 36px 32px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      position: relative;
+      animation: slideUp 0.25s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    .modal-close {
+      position: absolute; top: 14px; right: 16px;
+      background: none; border: none;
+      font-size: 22px; cursor: pointer;
+      color: var(--text-muted); line-height: 1;
+    }
+    .modal-logo {
+      display: flex; flex-direction: column; align-items: center;
+      margin-bottom: 24px; gap: 8px;
+    }
+    .modal-logo-icon {
+      width: 56px; height: 56px; border-radius: 14px;
+      background: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; color: white; font-weight: 700;
+    }
+    .modal h2 { font-size: 1.25rem; font-weight: 700; color: var(--text); }
+    .modal-subtitle { font-size: 0.88rem; color: var(--text-muted); margin-top: 2px; }
+
+    /* ── GOOGLE BUTTON ── */
+    .btn-google {
+      width: 100%;
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      padding: 13px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+      margin-bottom: 18px;
+    }
+    .btn-google:hover {
+      border-color: #4285F4;
+      background: #f8faff;
+      box-shadow: 0 2px 8px rgba(66,133,244,0.15);
+    }
+    .btn-google:disabled { opacity: 0.6; cursor: not-allowed; }
+    .google-icon {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #4285F4;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 13px; font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    /* ── DIVIDER ── */
+    .divider {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 18px;
+    }
+    .divider-line { flex: 1; height: 1px; background: var(--border); }
+    .divider-text { font-size: 0.8rem; color: var(--text-muted); }
+
+    /* ── FORM ── */
+    .form-group { margin-bottom: 14px; }
+    .form-label {
+      display: block;
+      font-size: 0.82rem; font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+    .form-input {
+      width: 100%; padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.93rem;
+      color: var(--text);
+      background: var(--surface);
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus { outline: none; border-color: var(--primary); }
+    .form-input::placeholder { color: var(--text-muted); opacity: 0.7; }
+
+    .form-row-label {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 5px;
+    }
+    .forgot-link {
+      font-size: 0.78rem; color: var(--primary);
+      text-decoration: none; cursor: pointer;
+    }
+    .forgot-link:hover { text-decoration: underline; }
+
+    .btn-submit {
+      width: 100%; padding: 13px;
+      background: var(--primary);
+      color: white; border: none;
+      border-radius: 10px;
+      font-size: 0.95rem; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      transition: background 0.2s;
+      margin-top: 4px;
+    }
+    .btn-submit:hover { background: var(--primary-hover); }
+    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .modal-switch {
+      text-align: center; margin-top: 16px;
+      font-size: 0.85rem; color: var(--text-muted);
+    }
+    .modal-switch a {
+      color: var(--primary); font-weight: 600;
+      text-decoration: none; cursor: pointer;
+    }
+    .modal-switch a:hover { text-decoration: underline; }
+
+    .error-msg {
+      background: #fff5f5; border: 1px solid #fed7d7;
+      color: #c53030; border-radius: 7px;
+      padding: 9px 12px; font-size: 0.83rem;
+      margin-bottom: 12px; display: none;
+    }
+    .error-msg.show { display: block; }
+
+    /* ── USAGE BANNER ── */
+    .usage-banner {
+      background: var(--warning-bg);
+      border: 1px solid var(--warning-border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.85rem; color: #744210;
+    }
+    .usage-banner.hidden { display: none; }
+
+    .limit-banner {
+      background: #fff5f5; border: 1px solid #fed7d7;
+      border-radius: 8px; padding: 12px 16px;
+      margin-bottom: 16px; text-align: center;
+      display: none;
+    }
+    .limit-banner.show { display: block; }
+    .limit-banner p { font-size: 0.88rem; color: #c53030; margin-bottom: 8px; }
+    .btn-upgrade {
+      background: var(--primary); color: white;
+      border: none; padding: 8px 18px;
+      border-radius: 7px; font-size: 0.85rem;
+      font-weight: 600; cursor: pointer;
+      font-family: inherit;
+    }
+
+    /* ── MAIN CONTENT ── */
+    .container {
+      width: 100%; max-width: 760px;
+      margin: 0 auto; padding: 32px 20px;
+      flex: 1;
+    }
+
+    .page-header {
+      text-align: center; margin-bottom: 32px;
+    }
+    .page-header h1 {
+      font-size: 1.9rem; font-weight: 700;
+      color: var(--primary); margin-bottom: 6px;
+    }
+    .page-header p { color: var(--text-muted); font-size: 0.95rem; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .direction-tabs {
+      display: flex; gap: 0;
+      background: var(--bg);
+      border-radius: 8px; padding: 4px;
+      margin-bottom: 18px;
+    }
+    .dir-tab {
+      flex: 1; padding: 9px;
+      border: none; background: transparent;
+      border-radius: 6px; font-size: 0.88rem;
+      font-weight: 600; cursor: pointer;
+      color: var(--text-muted);
+      font-family: inherit; transition: all 0.2s;
+    }
+    .dir-tab.active {
+      background: var(--surface);
+      color: var(--primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .text-input {
+      width: 100%; padding: 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px; font-size: 0.95rem;
+      color: var(--text); background: var(--bg);
+      font-family: inherit; resize: vertical;
+      min-height: 130px; transition: border-color 0.2s;
+    }
+    .text-input:focus { outline: none; border-color: var(--primary); background: var(--surface); }
+    .text-input::placeholder { color: var(--text-muted); opacity: 0.6; }
+
+    .button-row {
+      display: flex; gap: 10px; margin-top: 14px;
+    }
+    .btn {
+      flex: 1; padding: 13px;
+      border: none; border-radius: 8px;
+      font-size: 0.93rem; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      transition: all 0.2s;
+      display: flex; align-items: center;
+      justify-content: center; gap: 6px;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-ghost {
+      background: var(--bg); color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: var(--border); }
+    .btn-copy { background: var(--accent); color: white; }
+    .btn-copy:hover { background: var(--accent-hover); }
+
+    .output-label {
+      font-size: 0.8rem; font-weight: 600;
+      color: var(--text-muted); margin-bottom: 8px;
+      display: flex; justify-content: space-between;
+    }
+    .output-box {
+      min-height: 120px; padding: 14px;
+      background: var(--bg); border: 1.5px solid var(--border);
+      border-radius: 8px; font-size: 1rem;
+      color: var(--text); white-space: pre-wrap;
+      word-break: break-word; line-height: 1.7;
+    }
+    .output-placeholder { color: var(--text-muted); font-style: italic; font-size: 0.9rem; }
+
+    /* ── PREMIUM BADGE ── */
+    .premium-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: linear-gradient(135deg, #f6d365, #fda085);
+      color: #7b3f00;
+      font-size: 0.75rem; font-weight: 700;
+      padding: 3px 9px; border-radius: 20px;
+    }
+
+    /* ── FREE LIMIT BAR ── */
+    .limit-bar-wrap { margin-top: 6px; }
+    .limit-bar-track {
+      height: 5px; background: var(--border);
+      border-radius: 3px; overflow: hidden; margin-top: 4px;
+    }
+    .limit-bar-fill {
+      height: 100%; border-radius: 3px;
+      background: var(--accent); transition: width 0.3s;
+    }
+    .limit-bar-fill.warn { background: #e53e3e; }
+
+    /* ── CONTACT ── */
+    .contact-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px; margin-bottom: 20px;
+      text-align: center;
+    }
+    .contact-section h3 { margin-bottom: 6px; }
+    .contact-section p { color: var(--text-muted); font-size: 0.88rem; margin-bottom: 16px; }
+    .social-links { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+    .social-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--primary); text-decoration: none;
+      padding: 8px 16px; border-radius: 7px;
+      border: 1px solid var(--border);
+      font-size: 0.88rem; transition: all 0.2s;
+    }
+    .social-link:hover { background: var(--primary-light); border-color: var(--primary); }
+
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 20px; text-align: center;
+      color: var(--text-muted); font-size: 0.82rem; line-height: 1.6;
+    }
+
+    @media (max-width: 480px) {
+      .nav { padding: 0 16px; }
+      .container { padding: 20px 14px; }
+      .card { padding: 16px; }
+      .page-header h1 { font-size: 1.5rem; }
+      .modal { padding: 28px 20px; }
+    }
+
+    /* ── AUTH WALL ── */
+    .auth-wall {
+      display: none;
+      position: fixed; inset: 0;
+      background: var(--bg);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      flex-direction: column;
+    }
+    .auth-wall.active { display: flex; }
+
+    .auth-wall-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 44px 36px;
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+      box-shadow: var(--shadow-md);
+      animation: slideUp 0.3s ease;
+    }
+    .auth-wall-icon {
+      width: 72px; height: 72px;
+      background: var(--primary);
+      border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px; color: white; font-weight: 800;
+      margin: 0 auto 20px;
+    }
+    .auth-wall h2 {
+      font-size: 1.5rem; font-weight: 700;
+      color: var(--text); margin-bottom: 8px;
+    }
+    .auth-wall-desc {
+      font-size: 0.92rem; color: var(--text-muted);
+      line-height: 1.6; margin-bottom: 28px;
+    }
+    .auth-wall-btns {
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .btn-wall-google {
+      width: 100%;
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      padding: 14px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 11px;
+      font-size: 0.97rem; font-weight: 600;
+      color: var(--text); cursor: pointer;
+      font-family: inherit; transition: all 0.2s;
+    }
+    .btn-wall-google:hover {
+      border-color: #4285F4;
+      background: #f8faff;
+      box-shadow: 0 2px 10px rgba(66,133,244,0.15);
+    }
+    .btn-wall-google:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-wall-email {
+      width: 100%; padding: 13px;
+      background: var(--primary); color: white;
+      border: none; border-radius: 11px;
+      font-size: 0.95rem; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      transition: background 0.2s;
+    }
+    .btn-wall-email:hover { background: var(--primary-hover); }
+    .auth-wall-divider {
+      display: flex; align-items: center; gap: 10px; margin: 4px 0;
+    }
+    .auth-wall-divider-line { flex: 1; height: 1px; background: var(--border); }
+    .auth-wall-divider-text { font-size: 0.8rem; color: var(--text-muted); }
+    .auth-wall-features {
+      display: flex; justify-content: center; gap: 20px;
+      margin-bottom: 28px; flex-wrap: wrap;
+    }
+    .auth-wall-feat {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.83rem; color: var(--text-muted);
+    }
+    .feat-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+    }
+
+  </style>
+</head>
+<body>
+
+<!-- ── AUTH WALL (ສະແດງຕອນຍັງບໍ່ login) ── -->
+<div class="auth-wall" id="auth-wall">
+  <div class="auth-wall-card">
+    <div class="auth-wall-icon">ລ</div>
+    <h2>Lao Karaoke</h2>
+    <p class="auth-wall-desc">
+      ກະລຸນາ Login ກ່ອນໃຊ້ງານ<br>
+      ເພື່ອຄວາມປອດໄພ ແລະ ປະສົບການທີ່ດີກວ່າ
+    </p>
+
+    <div class="auth-wall-features">
+      <div class="auth-wall-feat">
+        <div class="feat-dot" style="background:#38a169"></div>
+        ແປໄດ້ບໍ່ຈຳກັດ
+      </div>
+      <div class="auth-wall-feat">
+        <div class="feat-dot" style="background:#4285F4"></div>
+        ບັນທຶກປະຫວັດ
+      </div>
+      <div class="auth-wall-feat">
+        <div class="feat-dot" style="background:#e53e3e"></div>
+        ໃຊ້ຟຣີ 100%
+      </div>
+    </div>
+
+    <div class="auth-wall-btns">
+      <button class="btn-wall-google" id="btn-wall-google" onclick="wallSignInGoogle()">
+        <div class="google-icon">G</div>
+        <span id="wall-google-text">ເຂົ້າດ້ວຍ Google</span>
+      </button>
+
+      <div class="auth-wall-divider">
+        <div class="auth-wall-divider-line"></div>
+        <span class="auth-wall-divider-text">ຫຼືໃຊ້ອີເມວ</span>
+        <div class="auth-wall-divider-line"></div>
+      </div>
+
+      <button class="btn-wall-email" onclick="openModal('login')">
+        ເຂົ້າດ້ວຍ Email / ລົງທະບຽນ
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── NAV ── -->
+<nav class="nav">
+  <a class="nav-brand" href="#">
+    <div class="nav-brand-icon">ລ</div>
+    Lao Karaoke
+  </a>
+  <div class="nav-right">
+    <!-- Logged OUT state -->
+    <div id="nav-logged-out">
+      <button class="btn-nav-login" onclick="openModal('login')">ເຂົ້າສູ່ລະບົບ</button>
+    </div>
+    <!-- Logged IN state -->
+    <div id="nav-logged-in" style="display:none" class="nav-user">
+      <div class="nav-avatar" id="nav-avatar">?</div>
+      <span id="nav-name" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button class="btn-nav-logout" onclick="handleLogout()">ອອກ</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ── MODAL ── -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal" id="modal-box">
+    <button class="modal-close" onclick="closeModal()">×</button>
+
+    <div class="modal-logo">
+      <div class="modal-logo-icon">ລ</div>
+      <h2 id="modal-title">ເຂົ້າສູ່ລະບົບ</h2>
+      <p class="modal-subtitle" id="modal-sub">ຍິນດີຕ້ອນຮັບ 👋</p>
+    </div>
+
+    <div class="error-msg" id="modal-error"></div>
+
+    <!-- Google Button -->
+    <button class="btn-google" id="btn-google" onclick="signInWithGoogle()">
+      <div class="google-icon">G</div>
+      <span id="google-btn-text">ເຂົ້າດ້ວຍ Google</span>
+    </button>
+
+    <div class="divider">
+      <div class="divider-line"></div>
+      <span class="divider-text">ຫຼືໃຊ້ອີເມວ</span>
+      <div class="divider-line"></div>
+    </div>
+
+    <!-- Register name field (hidden for login) -->
+    <div class="form-group" id="field-name" style="display:none">
+      <label class="form-label">ຊື່ທີ່ສະແດງ</label>
+      <input class="form-input" id="inp-name" type="text" placeholder="ຊື່ຂອງທ່ານ" autocomplete="name">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">ອີເມວ</label>
+      <input class="form-input" id="inp-email" type="email" placeholder="your@email.com" autocomplete="email">
+    </div>
+
+    <div class="form-group" id="field-password">
+      <div class="form-row-label">
+        <label class="form-label" style="margin:0">ລະຫັດຜ່ານ</label>
+        <a class="forgot-link" id="forgot-link" onclick="switchMode('forgot')">ລືມລະຫັດ?</a>
+      </div>
+      <input class="form-input" id="inp-password" type="password" placeholder="ລະຫັດຜ່ານ" autocomplete="current-password">
+    </div>
+
+    <div class="form-group" id="field-confirm" style="display:none">
+      <label class="form-label">ຢືນຢັນລະຫັດຜ່ານ</label>
+      <input class="form-input" id="inp-confirm" type="password" placeholder="ພິມລະຫັດຜ່ານອີກຄັ້ງ">
+    </div>
+
+    <button class="btn-submit" id="btn-submit" onclick="handleSubmit()">ເຂົ້າສູ່ລະບົບ</button>
+
+    <div class="modal-switch" id="modal-switch">
+      ຍັງບໍ່ມີບັນຊີ? <a onclick="switchMode('register')">ລົງທະບຽນ</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── MAIN ── -->
+<div class="container">
+  <div class="page-header">
+    <h1>ແປລາວ ↔ Karaoke</h1>
+    <p>ເຄື່ອງມືແປພາສາລາວເປັນ Karaoke ແລະ ກັບຄືນ</p>
+  </div>
+
+  <!-- Usage bar (free users) -->
+  <div id="usage-bar-wrap" class="hidden usage-banner">
+    <span>⚡</span>
+    <div style="flex:1">
+      <div style="display:flex;justify-content:space-between">
+        <span>ໃຊ້ວັນນີ້: <strong id="usage-count">0</strong> / 10 ຄັ້ງ</span>
+        <span id="usage-percent">0%</span>
+      </div>
+      <div class="limit-bar-track">
+        <div class="limit-bar-fill" id="limit-bar" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Limit reached -->
+  <div id="limit-banner" class="limit-banner">
+    <p>🔒 ໃຊ້ຄົບ 10 ຄັ້ງສຳລັບວັນນີ້ — ກະລຸນາ Login ຫຼື ອັບເກຣດ Premium</p>
+    <button class="btn-upgrade" onclick="openModal('login')">ເຂົ້າສູ່ລະບົບ / Premium</button>
+  </div>
+
+  <!-- Translator Card -->
+  <div class="card">
+    <div class="direction-tabs">
+      <button class="dir-tab active" id="tab-lk" onclick="setDir('lao-to-karaoke')">🇱🇦 ລາວ → Karaoke</button>
+      <button class="dir-tab" id="tab-kl" onclick="setDir('karaoke-to-lao')">Karaoke → 🇱🇦 ລາວ</button>
+    </div>
+
+    <textarea class="text-input" id="inputText"
+      placeholder="ພິມຂໍ້ຄວາມທີ່ນີ້... (Ctrl+Enter ເພື່ອແປ)"></textarea>
+
+    <div class="button-row">
+      <button class="btn btn-primary" id="translateBtn" onclick="translateText()">🔄 ແປພາສາ</button>
+      <button class="btn btn-ghost" onclick="clearText()">✕ ລ້າງ</button>
+    </div>
+  </div>
+
+  <!-- Output Card -->
+  <div class="card">
+    <div class="output-label">
+      <span id="output-label-txt">ຜົນການແປ</span>
+      <button class="btn btn-copy" id="copyBtn" style="display:none;padding:5px 14px;font-size:0.8rem;border-radius:6px" onclick="copyOutput()">ຄັດລອກ</button>
+    </div>
+    <div class="output-box" id="output">
+      <span class="output-placeholder">ຜົນການແປຈະປະກົດທີ່ນີ້...</span>
+    </div>
+  </div>
+
+  <!-- Contact -->
+  <div class="contact-section">
+    <h3>ຕິດຕໍ່ພວກເຮົາ</h3>
+    <p>ຖ້າຄຳໃດແປຜິດ ຫຼື ຕ້ອງການແນະນຳ ຕິດຕໍ່ໄດ້ທີ່:</p>
+    <div class="social-links">
+      <a href="https://www.youtube.com/@GIRLLAO-6665" target="_blank" class="social-link">▶ YouTube</a>
+      <a href="https://www.facebook.com/share/1CbJTRfNMc/" target="_blank" class="social-link">f Facebook</a>
+      <a href="https://wa.me/2029988148" target="_blank" class="social-link">💬 WhatsApp</a>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>ສະຫງວນສິດ ພັດທະນາໂດຍ: ທ.ຈັນທະຈອນ ພິມມະສອນ</p>
+  <p>© 2025 Lao Karaoke</p>
+</footer>
+
+<script>
+// ── FIREBASE CONFIG ──────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyAQDV_jzYvaAR7EzbUclP5ru-rMygMW44I",
+  authDomain: "laokaraoke-43d77.firebaseapp.com",
+  projectId: "laokaraoke-43d77",
+  storageBucket: "laokaraoke-43d77.firebasestorage.app",
+  messagingSenderId: "6060211155",
+  appId: "1:6060211155:web:f5a63c55cf6e0ea9180d26"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// ── CONSTANTS ────────────────────────────────────────────────────────────────
+const FREE_LIMIT   = 10;
+const USAGE_KEY    = 'lk_usage';
+const DATE_KEY     = 'lk_date';
+let   currentUser  = null;
+let   currentMode  = 'login'; // login | register | forgot
+let   direction    = 'lao-to-karaoke';
+
+// ── DAILY USAGE ──────────────────────────────────────────────────────────────
+function getUsage() {
+  const today = new Date().toDateString();
+  if (localStorage.getItem(DATE_KEY) !== today) {
+    localStorage.setItem(USAGE_KEY, '0');
+    localStorage.setItem(DATE_KEY, today);
+  }
+  return parseInt(localStorage.getItem(USAGE_KEY) || '0');
+}
+function incUsage() {
+  localStorage.setItem(USAGE_KEY, String(getUsage() + 1));
+  renderUsageBar();
+}
+function canTranslate() {
+  if (currentUser) return true; // ຜູ້ໃຊ້ login ໃຊ້ໄດ້ບໍ່ຈຳກັດ
+  return getUsage() < FREE_LIMIT;
+}
+function renderUsageBar() {
+  if (currentUser) {
+    document.getElementById('usage-bar-wrap').classList.add('hidden');
+    document.getElementById('limit-banner').classList.remove('show');
+    return;
+  }
+  const u = getUsage();
+  const pct = Math.min(Math.round(u / FREE_LIMIT * 100), 100);
+  document.getElementById('usage-bar-wrap').classList.remove('hidden');
+  document.getElementById('usage-count').textContent = u;
+  document.getElementById('usage-percent').textContent = pct + '%';
+  const bar = document.getElementById('limit-bar');
+  bar.style.width = pct + '%';
+  bar.classList.toggle('warn', u >= FREE_LIMIT);
+  document.getElementById('limit-banner').classList.toggle('show', u >= FREE_LIMIT);
+  document.getElementById('translateBtn').disabled = u >= FREE_LIMIT;
+}
+
+// ── FIREBASE AUTH ─────────────────────────────────────────────────────────────
+auth.onAuthStateChanged(user => {
+  currentUser = user;
+  updateNavUI(user);
+  renderUsageBar();
+  // ── ສະແດງ/ຊ່ອນ auth wall ──
+  const wall = document.getElementById('auth-wall');
+  if (user) {
+    wall.classList.remove('active');
+    document.body.style.overflow = '';
+  } else {
+    wall.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+});
+
+function updateNavUI(user) {
+  const out = document.getElementById('nav-logged-out');
+  const inn = document.getElementById('nav-logged-in');
+  if (user) {
+    out.style.display = 'none';
+    inn.style.display = 'flex';
+    document.getElementById('nav-name').textContent = user.displayName || user.email;
+    const av = document.getElementById('nav-avatar');
+    if (user.photoURL) {
+      av.innerHTML = `<img src="${user.photoURL}" alt="">`;
+    } else {
+      av.textContent = (user.displayName || user.email || '?')[0].toUpperCase();
+    }
+  } else {
+    out.style.display = '';
+    inn.style.display = 'none';
+  }
+}
+
+
+// ── SIGN IN FROM AUTH WALL ────────────────────────────────────────────────────
+async function wallSignInGoogle() {
+  const btn  = document.getElementById('btn-wall-google');
+  const txt  = document.getElementById('wall-google-text');
+  btn.disabled = true;
+  txt.textContent = 'ກຳລັງເຂົ້າ...';
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await auth.signInWithPopup(provider);
+    // onAuthStateChanged ຈະ hide wall ອັດຕະໂນມັດ
+  } catch (e) {
+    if (e.code === 'auth/popup-blocked') {
+      alert('Browser block popup — ກະລຸນາ allow popup ສຳລັບໜ້ານີ້');
+    } else if (e.code !== 'auth/popup-closed-by-user') {
+      alert(parseError(e.code));
+    }
+  } finally {
+    btn.disabled = false;
+    txt.textContent = 'ເຂົ້າດ້ວຍ Google';
+  }
+}
+
+// ── GOOGLE SIGN-IN ────────────────────────────────────────────────────────────
+async function signInWithGoogle() {
+  const btn = document.getElementById('btn-google');
+  btn.disabled = true;
+  btn.querySelector('span').textContent = 'ກຳລັງເຂົ້າ...';
+  clearError();
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await auth.signInWithPopup(provider);
+    closeModal();
+  } catch (e) {
+    if (e.code !== 'auth/popup-closed-by-user') showError(parseError(e.code));
+  } finally {
+    btn.disabled = false;
+    btn.querySelector('span').textContent = document.getElementById('google-btn-text').dataset.text || 'ເຂົ້າດ້ວຍ Google';
+  }
+}
+
+function handleLogout() {
+  if (confirm('ອອກຈາກລະບົບ?')) auth.signOut();
+}
+
+// ── EMAIL AUTH ────────────────────────────────────────────────────────────────
+async function handleSubmit() {
+  clearError();
+  const email    = document.getElementById('inp-email').value.trim();
+  const password = document.getElementById('inp-password').value;
+  const confirm  = document.getElementById('inp-confirm').value;
+  const name     = document.getElementById('inp-name').value.trim();
+
+  if (!email) { showError('ກະລຸນາໃສ່ອີເມວ'); return; }
+
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true; btn.textContent = 'ກຳລັງດຳເນີນການ...';
+
+  try {
+    if (currentMode === 'login') {
+      if (!password) { showError('ກະລຸນາໃສ່ລະຫັດຜ່ານ'); return; }
+      await auth.signInWithEmailAndPassword(email, password);
+      closeModal();
+
+    } else if (currentMode === 'register') {
+      if (!name) { showError('ກະລຸນາໃສ່ຊື່'); return; }
+      if (password.length < 6) { showError('ລະຫັດຕ້ອງ 6 ຕົວຂຶ້ນໄປ'); return; }
+      if (password !== confirm) { showError('ລະຫັດຜ່ານບໍ່ຕົງກັນ'); return; }
+      const cred = await auth.createUserWithEmailAndPassword(email, password);
+      await cred.user.updateProfile({ displayName: name });
+      closeModal();
+
+    } else if (currentMode === 'forgot') {
+      await auth.sendPasswordResetEmail(email);
+      showError('✅ ສົ່ງ email reset ແລ້ວ! ກວດ inbox ຂອງທ່ານ', 'success');
+    }
+  } catch (e) {
+    console.error('[Auth submit error]', e.code, e.message);
+    showError(parseError(e.code));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = currentMode === 'login' ? 'ເຂົ້າສູ່ລະບົບ' : currentMode === 'register' ? 'ສ້າງບັນຊີ' : 'ສົ່ງ Email Reset';
+  }
+}
+
+// ── MODAL CONTROLS ────────────────────────────────────────────────────────────
+function openModal(mode = 'login') {
+  switchMode(mode);
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('inp-email').focus(), 100);
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  clearError();
+  document.getElementById('inp-email').value = '';
+  document.getElementById('inp-password').value = '';
+  document.getElementById('inp-confirm').value = '';
+  document.getElementById('inp-name').value = '';
+}
+function closeModalOutside(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+function switchMode(mode) {
+  currentMode = mode;
+  clearError();
+  const isLogin    = mode === 'login';
+  const isRegister = mode === 'register';
+  const isForgot   = mode === 'forgot';
+
+  document.getElementById('modal-title').textContent =
+    isLogin ? 'ເຂົ້າສູ່ລະບົບ' : isRegister ? 'ສ້າງບັນຊີ' : 'ລືມລະຫັດຜ່ານ';
+  document.getElementById('modal-sub').textContent =
+    isLogin ? 'ຍິນດີຕ້ອນຮັບ 👋' : isRegister ? 'ສ້າງບັນຊີໃໝ່' : 'ກຣອກ email ເພື່ອ reset';
+
+  document.getElementById('btn-google').style.display   = isForgot ? 'none' : '';
+  document.querySelector('.divider').style.display      = isForgot ? 'none' : '';
+  document.getElementById('field-name').style.display   = isRegister ? '' : 'none';
+  document.getElementById('field-password').style.display = isForgot ? 'none' : '';
+  document.getElementById('field-confirm').style.display  = isRegister ? '' : 'none';
+  document.getElementById('forgot-link').style.display    = isLogin ? '' : 'none';
+
+  const btn = document.getElementById('btn-submit');
+  btn.textContent = isLogin ? 'ເຂົ້າສູ່ລະບົບ' : isRegister ? 'ສ້າງບັນຊີ' : 'ສົ່ງ Email Reset';
+
+  const sw = document.getElementById('modal-switch');
+  if (isForgot) {
+    sw.innerHTML = `<a onclick="switchMode('login')">← ກັບໄປ Login</a>`;
+  } else if (isLogin) {
+    sw.innerHTML = `ຍັງບໍ່ມີບັນຊີ? <a onclick="switchMode('register')">ລົງທະບຽນ</a>`;
+  } else {
+    sw.innerHTML = `ມີບັນຊີແລ້ວ? <a onclick="switchMode('login')">ເຂົ້າສູ່ລະບົບ</a>`;
+  }
+  document.getElementById('google-btn-text').textContent =
+    isRegister ? 'ລົງທະບຽນດ້ວຍ Google' : 'ເຂົ້າດ້ວຍ Google';
+}
+
+function showError(msg, type = 'error') {
+  const el = document.getElementById('modal-error');
+  el.textContent = msg; el.classList.add('show');
+  if (type === 'success') { el.style.background = '#f0fff4'; el.style.borderColor = '#9ae6b4'; el.style.color = '#276749'; }
+  else { el.style.background = ''; el.style.borderColor = ''; el.style.color = ''; }
+}
+function clearError() {
+  const el = document.getElementById('modal-error');
+  el.classList.remove('show'); el.textContent = '';
+}
+
+function parseError(code) {
+  console.error('[Firebase Auth Error]', code);
+  const map = {
+    'auth/user-not-found':           'ບໍ່ພົບບັນຊີນີ້ — ກະລຸນາລົງທະບຽນກ່ອນ',
+    'auth/wrong-password':           'ລະຫັດຜ່ານຜິດ — ກະລຸນາກວດສອບໃໝ່',
+    'auth/invalid-email':            'ຮູບແບບອີເມວຜິດ — ເຊັ່ນ: name@gmail.com',
+    'auth/email-already-in-use':     'ອີເມວນີ້ຖືກໃຊ້ແລ້ວ — ກະລຸນາ Login ແທນ',
+    'auth/weak-password':            'ລະຫັດຕ້ອງມີຢ່າງໜ້ອຍ 6 ຕົວອັກສອນ',
+    'auth/too-many-requests':        'ພະຍາຍາມຫຼາຍເກີນ — ລອງໃໝ່ໃນ 5 ນາທີ',
+    'auth/invalid-credential':       'ອີເມວ ຫຼື ລະຫັດຜ່ານຜິດ',
+    'auth/popup-blocked':            'Browser block popup — ກົດ Allow ໃນ address bar',
+    'auth/operation-not-allowed':    '❌ Email/Password auth ຍັງບໍ່ໄດ້ເປີດ — ໄປ Firebase Console → Authentication → Enable Email/Password',
+    'auth/network-request-failed':   'ບໍ່ມີ internet connection',
+    'auth/internal-error':           'ຂໍ້ຜິດພາດ server — ລອງໃໝ່ອີກຄັ້ງ',
+    'auth/configuration-not-found':  '❌ Firebase config ຜິດ — ກວດ authDomain',
+  };
+  return map[code] || `ຂໍ້ຜິດພາດ: ${code}`;
+}
+
+// ── TRANSLATOR ────────────────────────────────────────────────────────────────
+const karaokeToLaoMap = {
+  "sam":"ຊໍ່າ","bg":"ເບີງ","happy birthday":"ສຸກສັນວັນເກີດ",
+  "sabaidee":"ສະບາຍດີ","sabai":"ສະບາຍ","khopjai":"ຂອບໃຈ",
+  "khop":"ຂອບ","bor pen yang":"ບໍ່ເປັນຫຍັງ","bor":"ບໍ່",
+  "khoy":"ຂ້ອຍ","jao":"ເຈົ້າ","kin":"ກິນ","khao":"ເຂົ້າ",
+  "nam":"ນ້ຳ","pai":"ໄປ","hak":"ຮັກ","di":"ດີ","pen":"ເປັນ",
+  "lao":"ລາວ","laos":"ລາວ","karaoke":"ຄາຣາໂອເກະ",
+  "muan":"ມ່ວນ","suay":"ສວຍ","ngam":"ງາມ","noi":"ນ້ອຍ",
+  "nyai":"ໃຫຍ່","sung":"ສູງ","tam":"ຕ່ຳ","yen":"ເຢັນ",
+  "hon":"ຮ້ອນ","wan":"ວັນ","deuan":"ເດືອນ","pi":"ປີ",
+  "nung":"ໜຶ່ງ","song":"ສອງ","sam":"ສາມ","si":"ສີ່",
+  "hok":"ຫົກ","jet":"ເຈັດ","paet":"ແປດ","kao":"ເກົ້າ","sip":"ສິບ",
+  "ka":"ກາ","kha":"ຂາ","na":"ນາ","ma":"ມາ","pa":"ປາ",
+  "la":"ລາ","ha":"ຫາ","ya":"ຍາ","wa":"ວາ","sa":"ສາ",
+  "da":"ດາ","ta":"ຕາ","ba":"ບາ","nga":"ງາ","ja":"ຈະ",
+  "cha":"ຊາ","ko":"ໂກ","no":"ໂນ","mo":"ໂມ","lo":"ໂລ",
+  "o":"ໂອ","h":"ເຮັດ","k":"ເຄ","m":"ໂມງ","y":"ຍັງ",
+  "u":"ຢູ່","c":"ຊິ","r":"ອາ","a":"ອາ","e":"ເອ","i":"ອິ",
+  "oo":"ອູ","aa":"ອາ","ee":"ອີ","ai":"ໄອ","ao":"ເອົາ",
+  "am":"ອຳ","an":"ອັນ","ang":"ອັງ","ong":"ອົງ","ing":"ອິງ",
+  "ok":"ອົກ","ak":"ອັກ","ot":"ອົດ","at":"ອັດ","ap":"ອັບ",
+};
+
+const laoToKaraokeMap = {};
+Object.entries(karaokeToLaoMap).forEach(([k, v]) => { if (!laoToKaraokeMap[v]) laoToKaraokeMap[v] = k; });
+laoToKaraokeMap["ຊໍ່າ"]="sam"; laoToKaraokeMap["ເບີງ"]="bg";
+laoToKaraokeMap["ເຮັດ"]="h";   laoToKaraokeMap["ຍັງ"]="y";
+laoToKaraokeMap["ຢູ່"]="u";    laoToKaraokeMap["ຊິ"]="c";
+laoToKaraokeMap["ໂມງ"]="m";   laoToKaraokeMap["ເຄ"]="k";
+
+function translate(text, dir) {
+  if (!text.trim()) return '';
+  const map  = dir === 'lao-to-karaoke' ? laoToKaraokeMap : karaokeToLaoMap;
+  const keys = Object.keys(map).sort((a, b) => b.length - a.length);
+  const lower = text.toLowerCase();
+  const results = [];
+  let i = 0;
+  while (i < lower.length) {
+    if (/\s/.test(lower[i])) { if (dir === 'lao-to-karaoke') results.push(' '); i++; continue; }
+    let matched = false;
+    for (const k of keys) {
+      if (lower.substring(i, i + k.length) === k) {
+        results.push(map[k]); i += k.length; matched = true; break;
+      }
+    }
+    if (!matched) { results.push(lower[i]); i++; }
+  }
+  return dir === 'lao-to-karaoke' ? results.join(' ').replace(/\s+/g, ' ').trim() : results.join('');
+}
+
+function setDir(d) {
+  direction = d;
+  document.getElementById('tab-lk').classList.toggle('active', d === 'lao-to-karaoke');
+  document.getElementById('tab-kl').classList.toggle('active', d === 'karaoke-to-lao');
+  document.getElementById('inputText').placeholder =
+    d === 'lao-to-karaoke' ? 'ພິມຂໍ້ຄວາມພາສາລາວ...' : 'Type karaoke text here...';
+  document.getElementById('output-label-txt').textContent =
+    d === 'lao-to-karaoke' ? 'ຜົນ Karaoke' : 'ຜົນພາສາລາວ';
+}
+
+function translateText() {
+  if (!canTranslate()) {
+    document.getElementById('limit-banner').classList.add('show');
+    return;
+  }
+  const input = document.getElementById('inputText').value.trim();
+  if (!input) return;
+  const output = document.getElementById('output');
+  output.innerHTML = '<span style="color:var(--text-muted)">ກຳລັງແປ...</span>';
+  document.getElementById('copyBtn').style.display = 'none';
+  setTimeout(() => {
+    const result = translate(input, direction);
+    output.textContent = result || '(ບໍ່ພົບຄຳແປ)';
+    output.style.color = '';
+    document.getElementById('copyBtn').style.display = result ? '' : 'none';
+    if (!currentUser) incUsage();
+  }, 200);
+}
+
+function clearText() {
+  document.getElementById('inputText').value = '';
+  document.getElementById('output').innerHTML = '<span class="output-placeholder">ຜົນການແປຈະປະກົດທີ່ນີ້...</span>';
+  document.getElementById('copyBtn').style.display = 'none';
+}
+
+function copyOutput() {
+  const text = document.getElementById('output').textContent;
+  if (!text || text.includes('ຜົນການແປ')) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    const orig = btn.textContent;
+    btn.textContent = 'ຄັດລອກແລ້ວ ✓';
+    setTimeout(() => btn.textContent = orig, 2000);
+  });
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  renderUsageBar();
+  document.getElementById('inputText').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); translateText(); }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal();
+  });
+});
+</script>
+</body>
 </html>
