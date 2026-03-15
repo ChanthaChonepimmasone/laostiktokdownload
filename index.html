@@ -646,8 +646,57 @@
     }
     .btn-upgrade-premium:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(253,160,85,0.4); }
 
-    /* Nav premium btn */
-    .btn-nav-premium {
+    /* ── PLAN TABS ── */
+    .plan-tab {
+      flex: 1; border: 1.5px solid var(--border);
+      border-radius: 10px; padding: 12px 8px;
+      background: var(--bg); cursor: pointer;
+      font-family: inherit; transition: all 0.2s;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 2px;
+      position: relative;
+    }
+    .plan-tab.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+    }
+    .plan-tab-label {
+      font-size: 0.82rem; color: var(--text-muted);
+      font-weight: 600;
+    }
+    .plan-tab.active .plan-tab-label { color: var(--primary); }
+    .plan-tab-price {
+      font-size: 1rem; font-weight: 800;
+      color: var(--text);
+    }
+    .plan-tab.active .plan-tab-price { color: var(--primary); }
+    .plan-save-badge {
+      position: absolute; top: -9px;
+      background: var(--accent); color: white;
+      font-size: 0.65rem; font-weight: 700;
+      padding: 2px 7px; border-radius: 10px;
+    }
+
+    /* ── SAVE TO FIRESTORE (fallback) ── */
+    .btn-save-firestore {
+      width: 100%; padding: 11px;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 11px; font-size: 0.85rem;
+      font-weight: 600; cursor: pointer;
+      font-family: inherit; transition: all 0.2s;
+      margin-top: 8px;
+    }
+    .btn-save-firestore:hover { background: var(--bg); }
+    .btn-save-firestore:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* WhatsApp green button override */
+    .btn-send-confirm {
+      background: #25D366 !important;
+      color: white !important;
+    }
+    .btn-send-confirm:hover { box-shadow: 0 4px 16px rgba(37,211,102,0.4) !important; }
       background: linear-gradient(135deg, #f6d365, #fda085);
       color: #7b3f00; border: none;
       padding: 6px 13px; border-radius: 7px;
@@ -1263,6 +1312,20 @@ function parseError(code) {
 }
 
 // ── PREMIUM MODAL ─────────────────────────────────────────────────────────────
+const WHATSAPP_NUMBER = '2029988148';
+const PLANS_DATA = {
+  monthly: { label: '1 ເດືອນ', price: 20000,  priceStr: '20,000' },
+  yearly:  { label: '1 ປີ',    price: 200000, priceStr: '200,000' }
+};
+let selectedPlan = 'monthly';
+
+function selectPlan(plan) {
+  selectedPlan = plan;
+  document.getElementById('plan-monthly').classList.toggle('active', plan === 'monthly');
+  document.getElementById('plan-yearly').classList.toggle('active', plan === 'yearly');
+  document.getElementById('premium-amount-display').textContent = PLANS_DATA[plan].priceStr;
+}
+
 function openPremiumModal() {
   if (!currentUser) { openModal('login'); return; }
   document.getElementById('premium-modal-overlay').classList.add('open');
@@ -1275,10 +1338,12 @@ function closePremiumModalOutside(e) {
 }
 
 let slipBase64 = null;
+let slipFileName = '';
 
 function handleSlipUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
+  slipFileName = file.name;
   const reader = new FileReader();
   reader.onload = (ev) => {
     slipBase64 = ev.target.result;
@@ -1286,36 +1351,86 @@ function handleSlipUpload(e) {
     preview.src = slipBase64;
     preview.style.display = 'block';
     document.getElementById('upload-icon').textContent = '✅';
-    document.getElementById('upload-text').textContent = file.name;
+    document.getElementById('upload-text').textContent = '✓ ' + file.name + ' — ກົດເພື່ອປ່ຽນ';
+    document.getElementById('upload-area').style.borderColor = '#38a169';
+    document.getElementById('upload-area').style.background = '#f0fff4';
+    // Enable both buttons
     document.getElementById('btn-send-confirm').disabled = false;
+    document.getElementById('btn-save-firestore').disabled = false;
+    document.getElementById('btn-save-firestore').style.display = '';
   };
   reader.readAsDataURL(file);
 }
 
-async function sendPaymentConfirm() {
+// ── WhatsApp send (primary method) ───────────────────────────────────────────
+function sendViaWhatsApp() {
   if (!currentUser || !slipBase64) return;
-  const btn = document.getElementById('btn-send-confirm');
-  btn.disabled = true;
-  btn.textContent = 'ກຳລັງສົ່ງ...';
 
+  const plan = PLANS_DATA[selectedPlan];
+  const name  = currentUser.displayName || '(ບໍ່ລະບຸ)';
+  const email = currentUser.email || '';
+
+  const msg = encodeURIComponent(
+    `👑 ຂໍ upgrade Premium Lao Karaoke\n\n` +
+    `📋 ຂໍ້ມູນ:\n` +
+    `• ຊື່: ${name}\n` +
+    `• ອີເມວ: ${email}\n` +
+    `• UID: ${currentUser.uid}\n` +
+    `• ແຜນ: ${plan.label} Premium\n` +
+    `• ຈຳນວນ: ${plan.priceStr} ກີບ\n\n` +
+    `✅ ໂອນຜ່ານ BCEL One ແລ້ວ — ສົ່ງ Slip ມາກ່ອນ ທ່ານໄດ້ຮັບ message ນີ້`
+  );
+
+  // Open WhatsApp with the pre-filled message
+  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank');
+
+  // Also save to Firestore for record
+  saveToFirestore('whatsapp');
+
+  // Show success
+  document.getElementById('premium-success-msg').style.display = 'block';
+  document.getElementById('btn-send-confirm').disabled = true;
+  document.getElementById('btn-send-confirm').textContent = '✅ ສົ່ງແລ້ວ — ຮໍຖ້າ Admin';
+}
+
+// ── Firestore save (fallback / also called after WhatsApp) ───────────────────
+async function saveToFirestore(source = 'direct') {
+  if (!currentUser) return;
   try {
-    // Save pending premium request to Firestore
     await db.collection('premiumRequests').add({
       uid: currentUser.uid,
       email: currentUser.email,
       displayName: currentUser.displayName || '',
-      slipImage: slipBase64,
+      plan: selectedPlan,
+      planLabel: PLANS_DATA[selectedPlan].label,
+      price: PLANS_DATA[selectedPlan].price,
+      slipImage: slipBase64 || null,
+      slipFileName: slipFileName,
+      source: source, // 'whatsapp' or 'direct'
       requestedAt: firebase.firestore.FieldValue.serverTimestamp(),
       status: 'pending'
     });
+  } catch(e) {
+    console.warn('Firestore save error:', e);
+  }
+}
 
-    // Show success message
+async function sendPaymentConfirm() {
+  if (!currentUser || !slipBase64) return;
+  const btn = document.getElementById('btn-save-firestore');
+  btn.disabled = true;
+  btn.textContent = 'ກຳລັງສົ່ງ...';
+  try {
+    await saveToFirestore('direct');
     document.getElementById('premium-success-msg').style.display = 'block';
+    document.getElementById('premium-success-msg').innerHTML =
+      '✅ ສົ່ງຢືນຢັນສຳເລັດ! ລໍຖ້າ Admin ກວດສອບ 1-24 ຊົ່ວໂມງ<br>' +
+      '<a href="https://wa.me/' + WHATSAPP_NUMBER + '" target="_blank" style="color:#276749;font-weight:700">💬 ຕິດຕໍ່ WhatsApp ດ່ວນຂຶ້ນ</a>';
     btn.style.display = 'none';
-
+    document.getElementById('btn-send-confirm').style.display = 'none';
   } catch(e) {
     btn.disabled = false;
-    btn.textContent = '&#x1F451; ສົ່ງຢືນຢັນ Premium';
+    btn.textContent = '✅ ສົ່ງຢືນຢັນ (ບໍ່ມີ WhatsApp)';
     alert('ເກີດຂໍ້ຜິດພາດ: ' + e.message);
   }
 }
@@ -1477,25 +1592,52 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="step-text">ອັບໂຫລດ screenshot ສະລິບ ແລ້ວ ກົດ <strong>"ສົ່ງຢືນຢັນ"</strong></div>
         </div>
 
-        <div class="confirm-upload-area" id="upload-area">
-          <input type="file" id="slip-input" accept="image/*" onchange="handleSlipUpload(event)">
-          <div id="upload-icon">&#x1F4F7;</div>
-          <p id="upload-text">ກົດເພື່ອເລືອກ screenshot ສະລິບ</p>
+        <!-- Plan selector -->
+        <div style="display:flex;gap:10px;margin-bottom:16px">
+          <button id="plan-monthly" class="plan-tab active" onclick="selectPlan('monthly')">
+            <span class="plan-tab-label">1 ເດືອນ</span>
+            <span class="plan-tab-price">20,000 ກີບ</span>
+          </button>
+          <button id="plan-yearly" class="plan-tab" onclick="selectPlan('yearly')" style="position:relative">
+            <span class="plan-save-badge">ປະຫຍັດ 17%</span>
+            <span class="plan-tab-label">1 ປີ</span>
+            <span class="plan-tab-price">200,000 ກີບ</span>
+          </button>
+        </div>
+
+        <!-- Amount display -->
+        <div style="text-align:center;margin-bottom:16px;padding:12px;background:var(--primary-light);border-radius:10px">
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px">ຈຳນວນທີ່ຕ້ອງໂອນ</div>
+          <div style="font-size:2rem;font-weight:800;color:var(--primary)" id="premium-amount-display">20,000</div>
+          <div style="font-size:0.85rem;color:var(--text-muted)">ກີບ</div>
+        </div>
+
+        <div class="confirm-upload-area" id="upload-area" onclick="document.getElementById('slip-input').click()">
+          <input type="file" id="slip-input" accept="image/*" onchange="handleSlipUpload(event)" style="display:none">
+          <div id="upload-icon" style="font-size:2rem">&#x1F4F7;</div>
+          <p id="upload-text" style="margin-top:6px;font-size:0.85rem;color:var(--text-muted)">ກົດເພື່ອເລືອກ screenshot ສະລິບ</p>
           <img id="upload-preview" class="upload-preview" alt="slip preview">
         </div>
 
-        <div id="premium-success-msg" style="display:none;background:#f0fff4;border:1px solid #9ae6b4;color:#276749;border-radius:8px;padding:10px 14px;font-size:0.85rem;margin-bottom:12px;text-align:center">
-          &#x2705; ສົ່ງຢືນຢັນສຳເລັດ! ລໍຖ້າການກວດສອບ 1-24 ຊົ່ວໂມງ
+        <div id="premium-success-msg" style="display:none;background:#f0fff4;border:1px solid #9ae6b4;color:#276749;border-radius:8px;padding:12px 14px;font-size:0.85rem;margin-bottom:12px;text-align:center">
+          &#x2705; ສົ່ງ Slip ຜ່ານ WhatsApp ສຳເລັດ!<br>
+          <span style="font-size:0.78rem;opacity:0.8">ທີມງານຈະກວດສອບ ແລ້ວ activate ພາຍໃນ 30 ນາທີ</span>
         </div>
 
-        <button class="btn-send-confirm" id="btn-send-confirm" onclick="sendPaymentConfirm()" disabled>
-          &#x1F451; ສົ່ງຢືນຢັນ Premium
+        <!-- Primary: Send via WhatsApp -->
+        <button class="btn-send-confirm" id="btn-send-confirm" onclick="sendViaWhatsApp()" disabled>
+          &#x1F4AC; ສົ່ງ Slip ຜ່ານ WhatsApp
+        </button>
+
+        <!-- Secondary: Save to Firestore -->
+        <button class="btn-save-firestore" id="btn-save-firestore" onclick="sendPaymentConfirm()" disabled style="display:none">
+          &#x2705; ສົ່ງຢືນຢັນ (ບໍ່ມີ WhatsApp)
         </button>
       </div>
 
       <p class="premium-note">
-        &#x23F1; ຫຼັງຈາກສົ່ງຢືນຢັນ ທີມງານຈະກວດສອບ ແລ້ວ activate Premium ພາຍໃນ 24 ຊົ່ວໂມງ<br>
-        &#x1F4DE; ຕິດຕໍ່ WhatsApp: <a href="https://wa.me/2029988148" target="_blank" style="color:var(--primary)">+856 20 29988148</a>
+        &#x23F1; ຫຼັງຈາກສົ່ງ Slip ທີມງານຈະ activate ພາຍໃນ 30 ນາທີ - 24 ຊົ່ວໂມງ<br>
+        &#x1F4DE; ຕິດຕໍ່ WhatsApp ໂດຍກົງ: <a href="https://wa.me/2029988148" target="_blank" style="color:var(--primary);font-weight:600">+856 20 29988148</a>
       </p>
     </div>
   </div>
