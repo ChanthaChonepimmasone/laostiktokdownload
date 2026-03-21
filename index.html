@@ -582,11 +582,7 @@
     }
     .limit-bar-fill.warn { background: var(--danger); }
 
-    /* ══ WORD COUNT ══ */
-    .word-count-row {
-      text-align: right; font-size: 0.75rem;
-      color: var(--text-muted); margin-top: 4px;
-    }
+
 
     /* ══ PREMIUM MODAL ══ */
     .premium-overlay {
@@ -1049,7 +1045,7 @@
       <span>⚡</span>
       <div class="usage-banner-inner">
         <div class="usage-bar-row">
-          <span>ໃຊ້ວັນນີ້: <strong id="usage-count">0</strong> / 10 ຄັ້ງ</span>
+          <span>ໃຊ້ວັນນີ້: <strong id="usage-count">0</strong> / 20 ຄັ້ງ</span>
           <span id="usage-pct">0%</span>
         </div>
         <div class="usage-bar-track">
@@ -1071,11 +1067,8 @@
         <button class="dir-tab" id="tab-kl" onclick="setDir('karaoke-to-lao')">Karaoke ➜ ລາວ</button>
       </div>
       <textarea class="text-input" id="inputText"
-        placeholder="ພິມຂໍ້ຄວາມທີ່ນີ້... (Ctrl+Enter ເພື່ອແປ)"
-        oninput="updateWordCount()"></textarea>
-      <div class="word-count-row">
-        <span id="word-count">0</span> / 20 ຄຳ
-      </div>
+        placeholder="ພິມຂໍ້ຄວາມທີ່ນີ້... (Ctrl+Enter ເພື່ອແປ)"></textarea>
+
       <div class="button-row">
         <button class="btn btn-primary" id="translateBtn" onclick="translateText()">🔄 ແປພາສາ</button>
         <button class="btn btn-ghost" onclick="clearText()">ລ້າງຂໍ້ຄວາມ</button>
@@ -1246,7 +1239,7 @@ const auth = firebase.auth();
 const db   = firebase.firestore();
 
 // ══ CONSTANTS ══════════════════════════════════════════════════════════════
-const FREE_LIMIT   = 10;
+const FREE_LIMIT   = 20;
 const WHATSAPP_NUM = '2029988148';
 const PLANS = {
   monthly: { label:'1 ເດືອນ', price:20000,  priceStr:'20,000',  pill:'💰 20,000 ກີບ / ເດືອນ' },
@@ -1833,12 +1826,7 @@ function translateText() {
   output.innerHTML = '<span style="color:var(--text-muted)">ກຳລັງແປ...</span>';
   copyBtn.style.display = 'none';
 
-  // Guard: cap at 20 words
-  const wordCount = countWords(input);
-  if (wordCount > 20) {
-    output.innerHTML = '<span style="color:var(--danger)">⚠️ ເກີນ 20 ຄຳ — ກະລຸນາໃສ່ສູງສຸດ 20 ຄຳ (' + wordCount + ' ຄຳ)</span>';
-    return;
-  }
+
 
   // Disable button during translation to prevent double-clicks
   const tBtn = document.getElementById('translateBtn');
@@ -1867,35 +1855,12 @@ function translateText() {
   }
 }
 
-function countWords(text) {
-  // Count words: split on whitespace, filter empty strings
-  return text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
-}
 
-function updateWordCount() {
-  const text = document.getElementById('inputText').value;
-  const wc   = countWords(text);
-  const el   = document.getElementById('word-count');
-  if (el) {
-    el.textContent = wc;
-    el.style.color = wc > 20 ? 'var(--danger)' : wc >= 18 ? 'var(--gold)' : 'var(--text-muted)';
-  }
-  // Live disable/enable translate button based on word count
-  const tBtn = document.getElementById('translateBtn');
-  if (tBtn && !isPremium) {
-    const overLimit = wc > 20;
-    const usageOver = getUsage() >= FREE_LIMIT;
-    tBtn.disabled = overLimit || usageOver;
-  } else if (tBtn && isPremium) {
-    tBtn.disabled = wc > 20;
-  }
-}
 
 function clearText() {
   document.getElementById('inputText').value = '';
   document.getElementById('output').innerHTML = '<span class="output-placeholder">ຜົນການແປຈະປະກົດທີ່ນີ້...</span>';
   document.getElementById('copyBtn').style.display = 'none';
-  updateWordCount();
 }
 
 function copyOutput() {
