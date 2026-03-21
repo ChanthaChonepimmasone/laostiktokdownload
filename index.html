@@ -347,6 +347,32 @@
       box-shadow: var(--shadow-sm);
     }
 
+    /* ── DIRECTION SELECT ── */
+    .dir-select {
+      width: 100%;
+      padding: 11px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.93rem;
+      font-weight: 600;
+      color: var(--text);
+      background: var(--surface);
+      font-family: inherit;
+      cursor: pointer;
+      margin-bottom: 16px;
+      appearance: auto;
+      transition: border-color 0.2s;
+    }
+    .dir-select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .dir-select option {
+      font-family: inherit;
+      font-size: 0.93rem;
+      padding: 8px;
+    }
+
     .text-input {
       width: 100%; padding: 14px;
       border: 1.5px solid var(--border);
@@ -1062,10 +1088,10 @@
 
     <!-- Translator -->
     <div class="card">
-      <div class="direction-tabs">
-        <button class="dir-tab active" id="tab-lk" onclick="setDir('lao-to-karaoke')">ລາວ ➜ Karaoke</button>
-        <button class="dir-tab" id="tab-kl" onclick="setDir('karaoke-to-lao')">Karaoke ➜ ລາວ</button>
-      </div>
+      <select class="dir-select" id="dir-select" onchange="setDir(this.value)">
+        <option value="lao-to-karaoke">ລາວ → Karaoke</option>
+        <option value="karaoke-to-lao">Karaoke → ລາວ</option>
+      </select>
       <textarea class="text-input" id="inputText"
         placeholder="ພິມຂໍ້ຄວາມທີ່ນີ້... (Ctrl+Enter ເພື່ອແປ)"></textarea>
 
@@ -1802,12 +1828,12 @@ function translate(text, dir) {
 
 function setDir(d) {
   direction = d;
-  document.getElementById('tab-lk').classList.toggle('active', d==='lao-to-karaoke');
-  document.getElementById('tab-kl').classList.toggle('active', d==='karaoke-to-lao');
+  const sel = document.getElementById('dir-select');
+  if (sel && sel.value !== d) sel.value = d;
   document.getElementById('inputText').placeholder =
-    d==='lao-to-karaoke' ? 'ພິມຂໍ້ຄວາມທີ່ນີ້... (Ctrl+Enter ເພື່ອແປ)' : 'Type karaoke text here...';
+    d === 'lao-to-karaoke' ? 'ພິມຂໍ້ຄວາມທີ່ນີ້... (Ctrl+Enter ເພື່ອແປ)' : 'Type karaoke text here...';
   document.getElementById('output-label-txt').textContent =
-    d==='lao-to-karaoke' ? 'ຜົນ Karaoke' : 'ຜົນພາສາລາວ';
+    d === 'lao-to-karaoke' ? 'ຜົນ Karaoke' : 'ຜົນພາສາລາວ';
 }
 
 // Debounce timer for live-translate (not used directly, but kept for future)
