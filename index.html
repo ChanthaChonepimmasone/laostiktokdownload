@@ -8333,42 +8333,62 @@ const karaokeToLaoMap = {
 		  "k": "ເຄ",
       "m": "ໂມງ"
 };
-const laoToKaraokeMap = {};
-Object.entries(karaokeToLaoMap).forEach(([k,v]) => { if(!laoToKaraokeMap[v]) laoToKaraokeMap[v]=k; });
-laoToKaraokeMap["ຊ຿່ົ"]="sam"; laoToKaraokeMap["ເບີງ"]="bg";
-laoToKaraokeMap["ເຮັດ"]="h";   laoToKaraokeMap["ໍັງ"]="y";
-laoToKaraokeMap["ຢູ່"]="u";    laoToKaraokeMap["ຊິ"]="c";
-laoToKaraokeMap["ໂມງ"]="m";   laoToKaraokeMap["ເຄ"]="k";
 
-// Pre-sort keys ONCE at startup (longest-first) so translate() never re-sorts
+// Pre-sort keys ONCE at startup
 const _sortedKL = Object.keys(karaokeToLaoMap).sort((a,b) => b.length - a.length);
 const _sortedLK = Object.keys(laoToKaraokeMap).sort((a,b) => b.length - a.length);
 const _maxKL    = _sortedKL[0]?.length || 1;
 const _maxLK    = _sortedLK[0]?.length || 1;
 
-function translate(text, dir) {
-  if (!text.trim()) return '';
-  const isLK   = dir === 'lao-to-karaoke';
-  const map    = isLK ? laoToKaraokeMap : karaokeToLaoMap;
-  const keys   = isLK ? _sortedLK       : _sortedKL;
-  const maxLen = isLK ? _maxLK          : _maxKL;
+// ── TRANSLATE FUNCTIONS ──────────────────────────────────────────────────────
+// Lao→Karaoke uses WORD-BASED matching (split on spaces first)
+// because Lao words are multi-codepoint and char-by-char breaks them
+
+function translateLaoToKaraoke(text) {
+  // Split into words by whitespace
+  const words = text.trim().split(/\s+/);
+  const results = [];
+  for (const word of words) {
+    if (!word) continue;
+    const lower = word.toLowerCase();
+    // Try longest-match from the map
+    let matched = false;
+    for (let ki = 0; ki < _sortedLK.length; ki++) {
+      const k = _sortedLK[ki];
+      if (lower === k || word === k) {
+        results.push(laoToKaraokeMap[k] || laoToKaraokeMap[lower]);
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      // Fallback: keep original word
+      results.push(word);
+    }
+  }
+  return results.join(' ').trim();
+}
+
+// Karaoke→Lao uses the existing char/token-based approach (works well for Latin)
+function translateKaraokeToLao(text) {
+  const map    = karaokeToLaoMap;
+  const keys   = _sortedKL;
+  const maxLen = _maxKL;
   const lower  = text.toLowerCase();
   const len    = lower.length;
   const results = [];
   let i = 0;
   while (i < len) {
     const ch = lower[i];
-    // Fast-path whitespace
     if (ch === ' ' || ch === '\n' || ch === '\r' || ch === '\t') {
-      if (isLK) results.push(' ');
-      i++; continue;
+      i++; continue;  // skip spaces between words, Lao has no spaces needed
     }
     const cap = Math.min(maxLen, len - i);
     let matched = false;
     for (let ki = 0; ki < keys.length; ki++) {
       const k = keys[ki];
       if (k.length > cap) continue;
-      if (k[0] !== ch)    continue;  // first-char pre-check
+      if (k[0] !== ch)    continue;
       if (lower.substring(i, i + k.length) === k) {
         results.push(map[k]);
         i += k.length;
@@ -8378,9 +8398,14 @@ function translate(text, dir) {
     }
     if (!matched) { results.push(ch); i++; }
   }
-  return isLK
-    ? results.join(' ').replace(/\s+/g, ' ').trim()
-    : results.join('');
+  return results.join('');
+}
+
+function translate(text, dir) {
+  if (!text.trim()) return '';
+  return dir === 'lao-to-karaoke'
+    ? translateLaoToKaraoke(text)
+    : translateKaraokeToLao(text);
 }
 
 function setDir(d) {
