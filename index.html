@@ -982,9 +982,9 @@
           <span style="font-size:.72rem;color:var(--text-muted)">ກີບ</span>
         </button>
         <button class="plan-tab" id="ptab-yearly" onclick="selectPlan('yearly')" style="position:relative">
-          <span class="plan-save">ປະຫຍັດ 17%</span>
+          <span class="plan-save">ສະບາຍໃຊ້ຍາວໆ</span>
           <span class="plan-tab-l">1 ປີ</span>
-          <span class="plan-tab-p">50,000</span>
+          <span class="plan-tab-p">60,000</span>
           <span style="font-size:.72rem;color:var(--text-muted)">ກີບ</span>
         </button>
       </div>
@@ -1022,7 +1022,7 @@
         </div>
         <div class="pm-step">
           <div class="pm-step-num">2</div>
-          <div class="pm-step-text">ໂອນ <strong id="pm-step2-amount">20,000 ກີບ</strong> ແລ້ວ screenshot ສະລິບ</div>
+          <div class="pm-step-text">ໂອນ <strong id="pm-step2-amount">5,000 ກີບ</strong> ແລ້ວ screenshot ສະລິບ</div>
         </div>
         <div class="pm-step">
           <div class="pm-step-num">3</div>
@@ -1165,7 +1165,7 @@
         <div class="p-usage-wrap">
           <div class="p-usage-row">
             <span style="color:var(--text-muted)">ໃຊ້ວັນນີ້</span>
-            <strong id="p-usage-text">0 / 10 ຄັ້ງ</strong>
+            <strong id="p-usage-text">0 / 20 ຄັ້ງ</strong>
           </div>
           <div class="p-usage-track">
             <div class="p-usage-fill" id="p-usage-fill" style="width:0%"></div>
@@ -1260,8 +1260,8 @@ const db   = firebase.firestore();
 const FREE_LIMIT   = 20;
 const WHATSAPP_NUM = '2029988148';
 const PLANS = {
-  monthly: { label:'1 ເດືອນ', price:20000,  priceStr:'20,000',  pill:'💰 20,000 ກີບ / ເດືອນ' },
-  yearly:  { label:'1 ປີ',    price:200000, priceStr:'200,000', pill:'💰 200,000 ກີບ / ປີ'   }
+  monthly: { label:'1 ເດືອນ', price:5000,  priceStr:'5,000',  pill:'💰 5,000 ກີບ / ເດືອນ' },
+  yearly:  { label:'1 ປີ',    price:60000, priceStr:'60,000', pill:'💰 60,000 ກີບ / ປີ'   }
 };
 
 let currentUser  = null;
