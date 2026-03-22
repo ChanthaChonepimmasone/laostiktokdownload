@@ -1790,8 +1790,10 @@ async function sendPaymentConfirm() {
 }
 
 // ══ TRANSLATOR ═══════════════════════════════════════════════════════════════
-// ══ TRANSLATION MAPS ══════════════════════════════════════════════════════
-// Karaoke → Lao  (Latin phonetic → Lao script)
+// ══ TRANSLATION MAP ══════════════════════════════════════════════════════════
+// Single source of truth: Karaoke (Latin) → Lao
+// laoToKaraokeMap is auto-built by reversing this map — ບໍ່ຕ້ອງຂຽນ 2 ຄັ້ງ
+
 const karaokeToLaoMap = {
    "ຊໍ່າ": "sam",
 		   "ເບີງ": "bg",
@@ -8379,6 +8381,15 @@ const karaokeToLaoMap = {
 		  "k": "ເຄ",
       "m": "ໂມງ"
 };
+
+// Auto-build reverse map (Lao → Karaoke) — longest Lao key wins on conflict
+const laoToKaraokeMap = {};
+Object.keys(karaokeToLaoMap)
+  .sort((a, b) => b.length - a.length)   // longest karaoke key first → best Lao value wins
+  .forEach(k => {
+    const v = karaokeToLaoMap[k];
+    if (!laoToKaraokeMap[v]) laoToKaraokeMap[v] = k;
+  });
 
 // Pre-sort keys ONCE at startup (longest-first)
 const _sortedKL = Object.keys(karaokeToLaoMap).sort((a,b) => b.length - a.length);
