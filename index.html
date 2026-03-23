@@ -30,7 +30,7 @@
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" defer></script>
+  <!-- Firestore SDK removed — usage tracked in localStorage only -->
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@300;400;500;600;700&display=swap');
@@ -1087,9 +1087,22 @@
         ✅ ສົ່ງຢືນຢັນ (ບໍ່ມີ WhatsApp)
       </button>
       <p class="pm-note">
-        ⏱ Activate ພາຍໃນ 30 ນາທີ – 24 ຊົ່ວໂມງ ·
-        <a href="https://wa.me/2029988148" target="_blank">+856 20 29988148</a>
+        ⏱ ຫຼັງໂອນ: ສົ່ງ Slip ຜ່ານ WhatsApp · Admin ຈະສົ່ງ <strong>Code ກັບຄືນ</strong> ພາຍໃນ 30 ນາທີ<br>
+        ຈາກນັ້ນ copy code ທີ່ໄດ້ຮັບ ແລ້ວ paste ໃສ່ຊ່ອງດ້ານລຸ່ມ ຫຼື ໃຊ້ link ທີ່ admin ສົ່ງໃຫ້<br>
+        <a href="https://wa.me/2029988148" target="_blank">📞 +856 20 29988148</a>
       </p>
+      <div style="margin-top:10px">
+        <input id="prem-code-input" type="text" placeholder="ໃສ່ Code Premium (PREM-...)"
+          style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;
+          font-size:.88rem;color:var(--text);background:var(--surface);font-family:inherit;
+          margin-bottom:8px">
+        <button onclick="activatePremiumFromInput()"
+          style="width:100%;padding:11px;background:var(--primary);color:#fff;border:none;
+          border-radius:8px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit">
+          ✅ ກວດສອບ &amp; Activate Code
+        </button>
+        <div id="code-result" style="margin-top:8px;font-size:.82rem;text-align:center"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1313,8 +1326,9 @@ const auth = firebase.auth();
 //     }
 //   }
 // }
-let db;
-try { db = firebase.firestore(); } catch(e) { db = null; }
+// Firestore removed — no db reads/writes. Premium managed via localStorage cache.
+// Admin activates premium by setting localStorage manually via WhatsApp confirmation.
+const db = null;
 
 // ══ CONSTANTS ══════════════════════════════════════════════════════════════
 const FREE_LIMIT   = 20;
@@ -1345,68 +1359,83 @@ const LS_PREM     = 'lk_premium';      // "1" if premium
 const LS_PREM_EX  = 'lk_premium_ex';  // expiry ISO string
 const LS_FS_DATE  = 'lk_fs_date';     // last Firestore read date
 
-async function loadUserDoc(uid) {
-  // ── Strategy: read Firestore MAX 1x per day per user ─────────────────────
-  // All other times: serve from localStorage cache → zero Firestore reads
-  const today      = new Date().toDateString();
-  const lastFsRead = localStorage.getItem(LS_FS_DATE + '_' + uid);
-  const cached     = localStorage.getItem(LS_PREM);
-  const cachedEx   = localStorage.getItem(LS_PREM_EX);
+// ── ADMIN PREMIUM ACTIVATION ─────────────────────────────────────────────────
+// Admin sends user a code via WhatsApp: PREM-YYYYMMDD-30 (date + days)
+// User enters code in browser console: activatePremium("PREM-20260324-30")
+// OR admin can type it in the URL: ?prem=PREM-20260324-30
+function activatePremium(code) {
+  if (!code || !code.startsWith('PREM-')) {
+    console.error('Invalid code format. Use: PREM-YYYYMMDD-DAYS');
+    return false;
+  }
+  const parts = code.split('-');
+  if (parts.length !== 3) { console.error('Invalid code'); return false; }
+  const [, dateStr, daysStr] = parts;
+  const days  = parseInt(daysStr);
+  const start = new Date(dateStr.slice(0,4)+'-'+dateStr.slice(4,6)+'-'+dateStr.slice(6,8));
+  if (isNaN(start.getTime()) || isNaN(days)) { console.error('Invalid date/days'); return false; }
+  const until = new Date(start.getTime() + days * 864e5);
+  if (until < new Date()) { console.error('Code expired'); return false; }
+  localStorage.setItem(LS_PREM,    '1');
+  localStorage.setItem(LS_PREM_EX, until.toISOString());
+  isPremium    = true;
+  premiumUntil = until;
+  updateNavUI(currentUser);
+  renderUsageBar();
+  if (currentPage === 'profile') renderProfilePage();
+  alert('✅ Premium activated until ' + until.toLocaleDateString('lo-LA'));
+  return true;
+}
 
-  // Always apply cached premium first (instant, no network)
+function activatePremiumFromInput() {
+  const inp = document.getElementById('prem-code-input');
+  const res = document.getElementById('code-result');
+  if (!inp || !res) return;
+  const ok = activatePremium(inp.value.trim());
+  if (ok) {
+    res.style.color = '#276749';
+    res.textContent = '✅ Activate ສຳເລັດ! ດຽວນີ້ທ່ານເປັນ Premium ແລ້ວ 🎉';
+    setTimeout(() => closePremiumModal(), 2000);
+  } else {
+    res.style.color = '#c53030';
+    res.textContent = '❌ Code ຜິດ ຫຼື ໝົດອາຍຸ — ກະລຸນາກວດສອບ';
+  }
+}
+
+// Auto-check URL param on load: ?prem=PREM-20260324-30
+(function() {
+  const url   = new URL(location.href);
+  const code  = url.searchParams.get('prem');
+  if (code) {
+    // Remove from URL so it doesn't leak in history
+    url.searchParams.delete('prem');
+    history.replaceState({}, '', url.toString());
+    // Activate after auth is ready (slight delay)
+    setTimeout(() => activatePremium(code), 1500);
+  }
+})();
+
+function loadUserDoc(uid) {
+  // No Firestore reads — use localStorage cache only.
+  // Admin grants premium by having user set localStorage via a secret code.
+  const cached   = localStorage.getItem(LS_PREM);
+  const cachedEx = localStorage.getItem(LS_PREM_EX);
   if (cached === '1') {
-    isPremium = true;
     if (cachedEx) {
       const until = new Date(cachedEx);
-      if (until > new Date()) { premiumUntil = until; }
-      else { isPremium = false; localStorage.removeItem(LS_PREM); localStorage.removeItem(LS_PREM_EX); }
-    }
-  }
-
-  // Only hit Firestore if we haven't read today
-  if (lastFsRead === today) return;
-
-  try {
-    if (!db) throw new Error('Firestore not available');
-    const doc = await db.collection('users').doc(uid).get();
-    // Mark that we read today — even if doc missing
-    localStorage.setItem(LS_FS_DATE + '_' + uid, today);
-
-    if (!doc.exists) return;
-    const d = doc.data();
-
-    // Update premium status from Firestore
-    if (d.isPremium === true) {
-      isPremium = true;
-      localStorage.setItem(LS_PREM, '1');
-    } else if (d.isPremium === false && !d.premiumUntil) {
-      isPremium = false;
-      localStorage.removeItem(LS_PREM);
-      localStorage.removeItem(LS_PREM_EX);
-    }
-
-    if (d.premiumUntil) {
-      const until = d.premiumUntil.toDate ? d.premiumUntil.toDate() : new Date(d.premiumUntil);
       if (until > new Date()) {
         isPremium    = true;
         premiumUntil = until;
-        localStorage.setItem(LS_PREM, '1');
-        localStorage.setItem(LS_PREM_EX, until.toISOString());
       } else {
         isPremium = false;
         localStorage.removeItem(LS_PREM);
         localStorage.removeItem(LS_PREM_EX);
       }
+    } else {
+      isPremium = true;
     }
-
-  } catch(e) {
-    // Quota exceeded or offline — already using cached values above, just log
-    console.warn('Firestore quota/offline:', e.code || e.message);
-    // Still mark today so we don't retry repeatedly and burn more quota
-    localStorage.setItem(LS_FS_DATE + '_' + uid, today);
   }
 }
-
 function getUsage() {
   const today = new Date().toDateString();
   if (localStorage.getItem(LS_DATE) !== today) {
@@ -1457,7 +1486,7 @@ auth.onAuthStateChanged(async user => {
 
   if (user) {
     // Load Firestore doc (sets isPremium, firestoreUsage)
-    await loadUserDoc(user.uid);
+    loadUserDoc(user.uid);
   }
 
   updateNavUI(user);
@@ -1781,26 +1810,11 @@ function sendViaWhatsApp() {
   btn.disabled = true; btn.textContent = '✅ ສົ່ງແລ້ວ — ລໍຖ້າ Admin';
 }
 
-async function saveToFirestore(source='direct') {
-  if (!currentUser) return;
-  try {
-    if (!db) throw new Error('Firestore not available');
-    await db.collection('premiumRequests').add({
-      uid: currentUser.uid, email: currentUser.email,
-      displayName: currentUser.displayName || '',
-      plan: selectedPlan, planLabel: PLANS[selectedPlan].label,
-      price: PLANS[selectedPlan].price,
-      slipImage: pmSlipBase64 || null, slipFileName: pmSlipName,
-      source,
-      requestedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      status: 'pending'
-    });
-  } catch(e) {
-    // Quota exceeded — still OK, user already sent via WhatsApp
-    console.warn('Firestore save skipped (quota?):', e.code || e.message);
-  }
+function saveToFirestore(source) {
+  // Firestore removed — slip sent via WhatsApp only.
+  // Admin manually activates premium via secret code.
+  console.log('Payment slip sent via WhatsApp — no Firestore write.');
 }
-
 async function sendPaymentConfirm() {
   if (!currentUser || !pmSlipBase64) return;
   const btn = document.getElementById('btn-fallback');
