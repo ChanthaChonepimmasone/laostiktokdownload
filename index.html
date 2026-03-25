@@ -1321,7 +1321,7 @@ function _scheduleWrite(uid, data) {
     try {
       await db.collection('users').doc(uid).set(data, { merge: true });
     } catch(e) { console.warn('scheduleWrite error:', e); }
-  }, 3000);
+  }, 10000); // ລໍ 10 ວິ ກ່ອນ Write — ຫຼຸດ Writes ລົງ 3x
 }
 
 // ══ FIRESTORE USAGE (for logged-in users) ══════════════════════════════════
