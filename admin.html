@@ -487,6 +487,147 @@
       font-family: var(--mono);
       font-size: .85rem;
     }
+
+    /* ── TABS ── */
+    .tab-nav {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 28px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: .82rem;
+      padding: 10px 18px;
+      cursor: pointer;
+      transition: all .2s;
+      margin-bottom: -1px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .pending-badge {
+      background: var(--red);
+      color: #fff;
+      border-radius: 10px;
+      font-size: .65rem;
+      padding: 2px 7px;
+      font-weight: 700;
+    }
+
+    /* ── REQUEST CARDS ── */
+    .req-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 14px;
+      animation: slideUp .3s ease;
+    }
+    .req-card.approved { border-color: rgba(62,207,142,.3); }
+    .req-card.rejected { border-color: rgba(224,92,92,.2); opacity: .6; }
+    .req-header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .req-avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6b7280, #374151);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: .95rem; color: #fff; flex-shrink: 0;
+    }
+    .req-meta { flex: 1; }
+    .req-meta .name { font-weight: 700; font-size: .92rem; }
+    .req-meta .email { font-family: var(--mono); font-size: .72rem; color: var(--muted); margin-top: 2px; }
+    .req-time { font-family: var(--mono); font-size: .7rem; color: var(--muted); }
+    .req-status {
+      font-family: var(--mono);
+      font-size: .68rem;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+    .req-status.pending  { background: rgba(245,200,66,.12); color: var(--accent); border: 1px solid rgba(245,200,66,.3); }
+    .req-status.approved { background: rgba(62,207,142,.12); color: var(--green);  border: 1px solid rgba(62,207,142,.3); }
+    .req-status.rejected { background: rgba(224,92,92,.1);   color: var(--red);    border: 1px solid rgba(224,92,92,.25); }
+
+    .req-body { padding: 16px 20px; display: flex; gap: 16px; align-items: flex-start; }
+    .slip-thumb {
+      width: 90px; height: 90px;
+      border-radius: 10px;
+      object-fit: cover;
+      cursor: zoom-in;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+      transition: transform .2s;
+    }
+    .slip-thumb:hover { transform: scale(1.05); }
+    .no-slip {
+      width: 90px; height: 90px;
+      border-radius: 10px;
+      border: 1px dashed var(--border);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); font-size: .72rem; font-family: var(--mono);
+      flex-shrink: 0; text-align: center;
+    }
+    .req-info { flex: 1; }
+    .req-info .plan-tag {
+      display: inline-block;
+      background: rgba(245,200,66,.1);
+      border: 1px solid rgba(245,200,66,.25);
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: .72rem;
+      padding: 3px 10px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+    .req-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .btn-approve {
+      background: var(--green);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 18px;
+      font-family: var(--mono);
+      font-size: .78rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .2s;
+    }
+    .btn-approve:hover { opacity: .85; }
+    .btn-approve:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-reject {
+      background: none;
+      border: 1px solid var(--red);
+      color: var(--red);
+      border-radius: 8px;
+      padding: 9px 18px;
+      font-family: var(--mono);
+      font-size: .78rem;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .btn-reject:hover { background: rgba(224,92,92,.1); }
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      font-family: var(--mono);
+      color: var(--muted);
+      font-size: .85rem;
+    }
+    .empty-state .big { font-size: 2.5rem; margin-bottom: 12px; }
   </style>
 </head>
 <body>
@@ -524,6 +665,14 @@
 
 <!-- MAIN -->
 <main>
+  <!-- TABS -->
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('search', this)">🔍 ຄົ້ນຫາ User</button>
+    <button class="tab-btn" onclick="switchTab('requests', this)">📋 ຄຳຂໍ Premium <span id="pending-count" class="pending-badge" style="display:none"></span></button>
+  </div>
+
+  <!-- TAB: SEARCH -->
+  <div id="tab-search" class="tab-panel">
   <!-- SEARCH -->
   <div class="section-label">ຄົ້ນຫາ User</div>
   <div class="search-wrap">
@@ -615,6 +764,25 @@
   </div>
 </main>
 
+  </div><!-- /tab-search -->
+
+  <!-- TAB: REQUESTS -->
+  <div id="tab-requests" class="tab-panel" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="section-label">ຄຳຂໍ Premium ທີ່ລໍຖ້າ</div>
+      <button class="btn-search" style="padding:8px 18px;font-size:.78rem" onclick="loadRequests()">🔄 Refresh</button>
+    </div>
+    <div id="requests-loading" style="text-align:center;padding:40px;font-family:var(--mono);color:var(--muted);font-size:.85rem">ກຳລັງໂຫລດ...</div>
+    <div id="requests-list"></div>
+  </div><!-- /tab-requests -->
+
+</main>
+
+<!-- SLIP MODAL -->
+<div id="slip-modal" onclick="closeSlip()" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.85);align-items:center;justify-content:center;cursor:zoom-out">
+  <img id="slip-img" src="" style="max-width:90vw;max-height:90vh;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.6)">
+</div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -631,7 +799,7 @@ const firebaseConfig = {
 
 // ⚠️ ໃສ່ Email Admin ທີ່ອະນຸຍາດ
 const ADMIN_EMAILS = [
-  'jonepms216@gmail.com', // ປ່ຽນເປັນ Email Admin ຂອງທ່ານ
+  'chanthachone.pimmasone@gmail.com', // ປ່ຽນເປັນ Email Admin ຂອງທ່ານ
 ];
 
 firebase.initializeApp(firebaseConfig);
@@ -889,6 +1057,190 @@ function showToast(msg, type = 'success') {
 
 // Init preview
 updateExpirePreview();
+
+// ══ TABS ════════════════════════════════════════════════════════════════════
+function switchTab(name, el) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).style.display = 'block';
+  el.classList.add('active');
+  if (name === 'requests') loadRequests();
+}
+
+// ══ PREMIUM REQUESTS ════════════════════════════════════════════════════════
+let _reqCache = [];
+
+async function loadRequests() {
+  document.getElementById('requests-loading').style.display = 'block';
+  document.getElementById('requests-list').innerHTML = '';
+  try {
+    const snap = await db.collection('premiumRequests')
+      .orderBy('requestedAt', 'desc')
+      .limit(50)
+      .get();
+
+    _reqCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderRequests(_reqCache);
+
+    // ອັບເດດ badge ຈຳນວນ pending
+    const pendingCount = _reqCache.filter(r => r.status === 'pending').length;
+    const badge = document.getElementById('pending-count');
+    if (pendingCount > 0) {
+      badge.textContent = pendingCount;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch(e) {
+    document.getElementById('requests-loading').innerHTML =
+      '<span style="color:var(--red)">❌ ດຶງຂໍ້ມູນລົ້ມເຫຼວ: ' + e.message + '</span>';
+  }
+}
+
+function renderRequests(list) {
+  document.getElementById('requests-loading').style.display = 'none';
+  const container = document.getElementById('requests-list');
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="big">📭</div>
+        ບໍ່ມີຄຳຂໍ Premium
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = list.map(r => {
+    const initials = (r.displayName || r.email || '?').charAt(0).toUpperCase();
+    const time = r.requestedAt
+      ? r.requestedAt.toDate().toLocaleString('lo-LA')
+      : '—';
+    const planMap = { monthly:'1 ເດືອນ', yearly:'1 ປີ' };
+    const planLabel = planMap[r.plan] || r.planLabel || r.plan || '—';
+    const priceStr = r.price ? Number(r.price).toLocaleString() + ' ກີບ' : '—';
+
+    const slipHtml = r.slipImage
+      ? `<img class="slip-thumb" src="${r.slipImage}" alt="slip"
+           onclick="openSlip('${r.id}')" title="ກົດເພື່ອຂະຫຍາຍ">`
+      : `<div class="no-slip">ບໍ່ມີ<br>ຮູບ</div>`;
+
+    const statusClass = r.status || 'pending';
+    const statusLabel = { pending:'⏳ ລໍຖ້າ', approved:'✅ ອະນຸມັດ', rejected:'❌ ປະຕິເສດ' }[statusClass] || statusClass;
+
+    const actionBtns = r.status === 'pending' ? `
+      <button class="btn-approve" onclick="approveRequest('${r.id}', '${r.uid}', '${r.plan}')">
+        ✅ ອະນຸມັດ & Upgrade
+      </button>
+      <button class="btn-reject" onclick="rejectRequest('${r.id}')">
+        ❌ ປະຕິເສດ
+      </button>` : '';
+
+    return `
+    <div class="req-card ${statusClass}" id="req-${r.id}">
+      <div class="req-header">
+        <div class="req-avatar">${initials}</div>
+        <div class="req-meta">
+          <div class="name">${r.displayName || '(ບໍ່ມີຊື່)'}</div>
+          <div class="email">${r.email || r.uid}</div>
+        </div>
+        <div class="req-time">${time}</div>
+        <div class="req-status ${statusClass}">${statusLabel}</div>
+      </div>
+      <div class="req-body">
+        ${slipHtml}
+        <div class="req-info">
+          <div class="plan-tag">👑 ${planLabel} — ${priceStr}</div>
+          <div style="font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-bottom:4px">
+            UID: ${r.uid || '—'}
+          </div>
+          <div style="font-family:var(--mono);font-size:.72rem;color:var(--muted)">
+            ຊ່ອງທາງ: ${r.source || '—'}
+          </div>
+          <div class="req-actions">${actionBtns}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function approveRequest(reqId, uid, plan) {
+  if (!uid) { showToast('ບໍ່ພົບ UID', 'error'); return; }
+
+  const btn = document.querySelector(`#req-${reqId} .btn-approve`);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ ກຳລັງ Upgrade...'; }
+
+  try {
+    // ກຳນົດວັນໝົດອາຍຸຕາມ Plan
+    const daysMap = { monthly: 30, yearly: 365 };
+    const days = daysMap[plan] || 30;
+    const until = new Date();
+    until.setDate(until.getDate() + days);
+
+    // Upgrade User
+    await db.collection('users').doc(uid).set({
+      isPremium: true,
+      premiumUntil: firebase.firestore.Timestamp.fromDate(until),
+      upgradedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      upgradedBy: auth.currentUser.email,
+    }, { merge: true });
+
+    // ອັບເດດ Status ຂອງ Request
+    await db.collection('premiumRequests').doc(reqId).set(
+      { status: 'approved', approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        approvedBy: auth.currentUser.email },
+      { merge: true }
+    );
+
+    showToast('✅ Upgrade ສຳເລັດ! ໝົດອາຍຸ ' + until.toLocaleDateString('lo-LA'), 'success');
+    loadRequests(); // Reload
+  } catch(e) {
+    showToast('❌ ເກີດຂໍ້ຜິດພາດ: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '✅ ອະນຸມັດ & Upgrade'; }
+  }
+}
+
+async function rejectRequest(reqId) {
+  if (!confirm('ຕ້ອງການປະຕິເສດຄຳຂໍນີ້ແທ້ບໍ?')) return;
+  try {
+    await db.collection('premiumRequests').doc(reqId).set(
+      { status: 'rejected', rejectedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        rejectedBy: auth.currentUser.email },
+      { merge: true }
+    );
+    showToast('ປະຕິເສດຄຳຂໍແລ້ວ', 'error');
+    loadRequests();
+  } catch(e) {
+    showToast('❌ ເກີດຂໍ້ຜິດພາດ: ' + e.message, 'error');
+  }
+}
+
+// ── Slip Modal ──────────────────────────────────────────────────────────────
+function openSlip(reqId) {
+  const r = _reqCache.find(x => x.id === reqId);
+  if (!r || !r.slipImage) return;
+  const modal = document.getElementById('slip-modal');
+  document.getElementById('slip-img').src = r.slipImage;
+  modal.style.display = 'flex';
+}
+function closeSlip() {
+  document.getElementById('slip-modal').style.display = 'none';
+}
+
+// ── Auto-load requests badge on init ───────────────────────────────────────
+auth.onAuthStateChanged(async user => {
+  if (user && ADMIN_EMAILS.includes(user.email)) {
+    // ດຶງ pending count ສຳລັບ badge
+    try {
+      const snap = await db.collection('premiumRequests')
+        .where('status', '==', 'pending').get();
+      if (!snap.empty) {
+        const badge = document.getElementById('pending-count');
+        badge.textContent = snap.size;
+        badge.style.display = 'inline-block';
+      }
+    } catch(e) {}
+  }
+});
 </script>
 </body>
 </html>
