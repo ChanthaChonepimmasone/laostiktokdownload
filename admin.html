@@ -770,7 +770,7 @@
   <div id="tab-requests" class="tab-panel" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div class="section-label">ຄຳຂໍ Premium ທີ່ລໍຖ້າ</div>
-      <button class="btn-search" style="padding:8px 18px;font-size:.78rem" onclick="loadRequests()">🔄 Refresh</button>
+      <div style="font-family:var(--mono);font-size:.72rem;color:var(--green)">🟢 Realtime — ອັບເດດອັດຕະໂນມັດ</div>
     </div>
     <div id="requests-loading" style="text-align:center;padding:40px;font-family:var(--mono);color:var(--muted);font-size:.85rem">ກຳລັງໂຫລດ...</div>
     <div id="requests-list"></div>
@@ -1069,31 +1069,55 @@ function switchTab(name, el) {
 
 // ══ PREMIUM REQUESTS ════════════════════════════════════════════════════════
 let _reqCache = [];
+let _unsubscribeRequests = null; // ເກັບ listener ສຳລັບ unsubscribe
 
-async function loadRequests() {
+// ✅ Realtime — ໃຊ້ onSnapshot ແທນ get()
+function loadRequests() {
   document.getElementById('requests-loading').style.display = 'block';
   document.getElementById('requests-list').innerHTML = '';
+
+  // ຍົກເລີກ listener ເກົ່າຖ້າມີ
+  if (_unsubscribeRequests) {
+    _unsubscribeRequests();
+    _unsubscribeRequests = null;
+  }
+
   try {
-    const snap = await db.collection('premiumRequests')
+    _unsubscribeRequests = db.collection('premiumRequests')
       .orderBy('requestedAt', 'desc')
       .limit(50)
-      .get();
+      .onSnapshot(snap => {
+        // ໂຫລດຄັ້ງທຳອິດ ຫຼື ທຸກຄັ້ງທີ່ມີການປ່ຽນແປງ
+        _reqCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderRequests(_reqCache);
 
-    _reqCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderRequests(_reqCache);
+        // ອັບເດດ badge
+        const pendingCount = _reqCache.filter(r => r.status === 'pending').length;
+        const badge = document.getElementById('pending-count');
+        if (pendingCount > 0) {
+          badge.textContent = pendingCount;
+          badge.style.display = 'inline-block';
+        } else {
+          badge.style.display = 'none';
+        }
 
-    // ອັບເດດ badge ຈຳນວນ pending
-    const pendingCount = _reqCache.filter(r => r.status === 'pending').length;
-    const badge = document.getElementById('pending-count');
-    if (pendingCount > 0) {
-      badge.textContent = pendingCount;
-      badge.style.display = 'inline-block';
-    } else {
-      badge.style.display = 'none';
-    }
+        // ແຈ້ງເຕືອນເມື່ອມີຄຳຂໍໃໝ່
+        snap.docChanges().forEach(change => {
+          if (change.type === 'added' && _reqCache.length > 1) {
+            const r = change.doc.data();
+            if (r.status === 'pending') {
+              showToast('🔔 ມີຄຳຂໍໃໝ່ຈາກ ' + (r.email || 'User'), 'success');
+            }
+          }
+        });
+
+      }, err => {
+        document.getElementById('requests-loading').innerHTML =
+          '<span style="color:var(--red)">❌ ດຶງຂໍ້ມູນລົ້ມເຫຼວ: ' + err.message + '</span>';
+      });
   } catch(e) {
     document.getElementById('requests-loading').innerHTML =
-      '<span style="color:var(--red)">❌ ດຶງຂໍ້ມູນລົ້ມເຫຼວ: ' + e.message + '</span>';
+      '<span style="color:var(--red)">❌ ເກີດຂໍ້ຜິດພາດ: ' + e.message + '</span>';
   }
 }
 
@@ -1226,19 +1250,27 @@ function closeSlip() {
   document.getElementById('slip-modal').style.display = 'none';
 }
 
-// ── Auto-load requests badge on init ───────────────────────────────────────
-auth.onAuthStateChanged(async user => {
+// ── Realtime badge listener ─────────────────────────────────────────────────
+let _unsubscribeBadge = null;
+
+auth.onAuthStateChanged(user => {
+  // ຍົກເລີກ listeners ເກົ່າ
+  if (_unsubscribeBadge) { _unsubscribeBadge(); _unsubscribeBadge = null; }
+  if (_unsubscribeRequests) { _unsubscribeRequests(); _unsubscribeRequests = null; }
+
   if (user && ADMIN_EMAILS.includes(user.email)) {
-    // ດຶງ pending count ສຳລັບ badge
-    try {
-      const snap = await db.collection('premiumRequests')
-        .where('status', '==', 'pending').get();
-      if (!snap.empty) {
+    // ✅ Realtime badge — ອັບເດດທຸກຄັ້ງທີ່ມີ pending ໃໝ່
+    _unsubscribeBadge = db.collection('premiumRequests')
+      .where('status', '==', 'pending')
+      .onSnapshot(snap => {
         const badge = document.getElementById('pending-count');
-        badge.textContent = snap.size;
-        badge.style.display = 'inline-block';
-      }
-    } catch(e) {}
+        if (snap.size > 0) {
+          badge.textContent = snap.size;
+          badge.style.display = 'inline-block';
+        } else {
+          badge.style.display = 'none';
+        }
+      }, () => {});
   }
 });
 </script>
