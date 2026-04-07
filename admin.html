@@ -1545,10 +1545,9 @@ async function loadSlipHistory(uid) {
   list.innerHTML = '';
 
   try {
+    // ດຶງດ້ວຍ where ຢ່າງດຽວ — ບໍ່ໃຊ້ orderBy ເພື່ອບໍ່ຕ້ອງ Index
     const snap = await db.collection('premiumRequests')
       .where('uid', '==', uid)
-      .orderBy('requestedAt', 'desc')
-      .limit(10)
       .get();
 
     loading.style.display = 'none';
@@ -1558,7 +1557,15 @@ async function loadSlipHistory(uid) {
       return;
     }
 
-    const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Sort ໃນ JS — ໃໝ່ສຸດກ່ອນ
+    const items = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => {
+        const at = a.requestedAt ? a.requestedAt.toDate() : new Date(0);
+        const bt = b.requestedAt ? b.requestedAt.toDate() : new Date(0);
+        return bt - at;
+      })
+      .slice(0, 10);
     list.innerHTML = items.map(r => {
       const time = r.requestedAt
         ? r.requestedAt.toDate().toLocaleDateString('lo-LA', {year:'numeric',month:'short',day:'numeric'})
