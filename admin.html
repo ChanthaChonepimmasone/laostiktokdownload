@@ -839,6 +839,13 @@
           ❌ ຍົກເລີກ Premium
         </button>
       </div>
+
+      <!-- SLIP HISTORY -->
+      <div id="slip-history-section" style="border-top:1px solid var(--border);padding-top:20px;margin-top:4px;display:none">
+        <h4 style="color:var(--accent);font-size:.9rem;margin-bottom:14px">🧾 ສະລິບທີ່ສົ່ງມາ</h4>
+        <div id="slip-history-loading" style="font-family:var(--mono);font-size:.78rem;color:var(--muted);padding:12px 0">ກຳລັງໂຫລດ...</div>
+        <div id="slip-history-list" style="display:flex;flex-wrap:wrap;gap:10px"></div>
+      </div>
     </div>
   </div>
 
@@ -1032,6 +1039,9 @@ function showUserCard(uid, d) {
 
   updateExpirePreview();
   document.getElementById('user-card').style.display = 'block';
+
+  // ໂຫລດ Slip History
+  loadSlipHistory(uid);
 }
 
 function checkPremium(d) {
@@ -1522,6 +1532,77 @@ function renderPremiumUsers(list, updateStats = true) {
       <tbody>${rows}</tbody>
     </table>
     </div>`;
+}
+
+// ── Slip History ────────────────────────────────────────────────────────────
+async function loadSlipHistory(uid) {
+  const section = document.getElementById('slip-history-section');
+  const loading = document.getElementById('slip-history-loading');
+  const list    = document.getElementById('slip-history-list');
+
+  section.style.display = 'block';
+  loading.style.display = 'block';
+  list.innerHTML = '';
+
+  try {
+    const snap = await db.collection('premiumRequests')
+      .where('uid', '==', uid)
+      .orderBy('requestedAt', 'desc')
+      .limit(10)
+      .get();
+
+    loading.style.display = 'none';
+
+    if (snap.empty) {
+      list.innerHTML = '<span style="font-family:var(--mono);font-size:.75rem;color:var(--muted)">ບໍ່ມີສະລິບ</span>';
+      return;
+    }
+
+    const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    list.innerHTML = items.map(r => {
+      const time = r.requestedAt
+        ? r.requestedAt.toDate().toLocaleDateString('lo-LA', {year:'numeric',month:'short',day:'numeric'})
+        : '—';
+      const planMap = { monthly:'1 ເດືອນ', yearly:'1 ປີ' };
+      const planLabel = planMap[r.plan] || r.plan || '—';
+      const statusColor = { pending:'var(--accent)', approved:'var(--green)', rejected:'var(--red)' }[r.status] || 'var(--muted)';
+      const statusIcon  = { pending:'⏳', approved:'✅', rejected:'❌' }[r.status] || '—';
+
+      if (r.slipImage) {
+        return `
+        <div style="position:relative;cursor:pointer" onclick="openSlipDirect('${r.id}', \`${r.slipImage.substring(0,30)}...\`)" title="${time} — ${planLabel}">
+          <img src="${r.slipImage}" onclick="openSlipById('${r.id}')"
+            style="width:90px;height:90px;object-fit:cover;border-radius:10px;border:2px solid ${statusColor};cursor:zoom-in">
+          <div style="position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.75);border-radius:4px;padding:2px 6px;font-family:var(--mono);font-size:.6rem;color:#fff">
+            ${statusIcon} ${time}
+          </div>
+          <div style="text-align:center;font-family:var(--mono);font-size:.65rem;color:var(--muted);margin-top:4px">${planLabel}</div>
+        </div>`;
+      } else {
+        return `
+        <div style="width:90px;text-align:center">
+          <div style="width:90px;height:90px;border-radius:10px;border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--muted);font-family:var(--mono)">ບໍ່ມີຮູບ</div>
+          <div style="font-family:var(--mono);font-size:.65rem;color:var(--muted);margin-top:4px">${statusIcon} ${time}</div>
+        </div>`;
+      }
+    }).join('');
+
+    // Store slips for modal access
+    window._slipHistoryCache = {};
+    items.forEach(r => { window._slipHistoryCache[r.id] = r; });
+
+  } catch(e) {
+    loading.style.display = 'none';
+    list.innerHTML = '<span style="font-family:var(--mono);font-size:.75rem;color:var(--red)">❌ ' + e.message + '</span>';
+  }
+}
+
+function openSlipById(reqId) {
+  const r = window._slipHistoryCache && window._slipHistoryCache[reqId];
+  if (!r || !r.slipImage) return;
+  const modal = document.getElementById('slip-modal');
+  document.getElementById('slip-img').src = r.slipImage;
+  modal.style.display = 'flex';
 }
 
 async function revokeFromList(uid, label) {
