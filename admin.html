@@ -628,6 +628,90 @@
       font-size: .85rem;
     }
     .empty-state .big { font-size: 2.5rem; margin-bottom: 12px; }
+
+    /* ── PREMIUM USERS ── */
+    .pu-stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+    }
+    .pu-stat-card .stat-num {
+      font-family: var(--mono);
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .pu-stat-card .stat-label {
+      font-family: var(--mono);
+      font-size: .68rem;
+      color: var(--muted);
+      letter-spacing: .06em;
+    }
+    .pu-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .85rem;
+    }
+    .pu-table th {
+      font-family: var(--mono);
+      font-size: .68rem;
+      color: var(--muted);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .pu-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(30,35,48,.6);
+      vertical-align: middle;
+    }
+    .pu-table tr:hover td { background: rgba(245,200,66,.03); }
+    .pu-table tr.expired td { opacity: .5; }
+    .pu-avatar-sm {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .78rem;
+      font-weight: 700;
+      color: #000;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+    .status-pill {
+      font-family: var(--mono);
+      font-size: .65rem;
+      padding: 3px 9px;
+      border-radius: 12px;
+    }
+    .status-pill.active   { background: rgba(62,207,142,.12); color: var(--green); border: 1px solid rgba(62,207,142,.25); }
+    .status-pill.expired  { background: rgba(224,92,92,.1);   color: var(--red);   border: 1px solid rgba(224,92,92,.2); }
+    .btn-sm-action {
+      font-family: var(--mono);
+      font-size: .68rem;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: none;
+      color: var(--muted);
+      transition: all .2s;
+    }
+    .btn-sm-action:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-sm-revoke:hover { border-color: var(--red); color: var(--red); }
+    .pu-empty {
+      text-align: center;
+      padding: 50px;
+      font-family: var(--mono);
+      color: var(--muted);
+      font-size: .85rem;
+    }
   </style>
 </head>
 <body>
@@ -669,6 +753,7 @@
   <div class="tab-nav">
     <button class="tab-btn active" onclick="switchTab('search', this)">🔍 ຄົ້ນຫາ User</button>
     <button class="tab-btn" onclick="switchTab('requests', this)">📋 ຄຳຂໍ Premium <span id="pending-count" class="pending-badge" style="display:none"></span></button>
+    <button class="tab-btn" onclick="switchTab('premium-users', this)">👑 Premium Users <span id="premium-count" class="pending-badge" style="background:var(--green);display:none"></span></button>
   </div>
 
   <!-- TAB: SEARCH -->
@@ -775,6 +860,27 @@
     <div id="requests-loading" style="text-align:center;padding:40px;font-family:var(--mono);color:var(--muted);font-size:.85rem">ກຳລັງໂຫລດ...</div>
     <div id="requests-list"></div>
   </div><!-- /tab-requests -->
+
+  <!-- TAB: PREMIUM USERS -->
+  <div id="tab-premium-users" class="tab-panel" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div class="section-label">👑 User Premium ທັງໝົດ</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="pu-search" type="text" placeholder="ຄົ້ນຫາ Email..."
+          oninput="filterPremiumUsers(this.value)"
+          style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:var(--mono);font-size:.78rem;outline:none;width:180px">
+        <select id="pu-filter" onchange="filterPremiumUsers(document.getElementById('pu-search').value)"
+          style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-family:var(--mono);font-size:.75rem;outline:none">
+          <option value="all">ທັງໝົດ</option>
+          <option value="active">Active</option>
+          <option value="expired">ໝົດອາຍຸ</option>
+        </select>
+      </div>
+    </div>
+    <div id="pu-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px"></div>
+    <div id="pu-loading" style="text-align:center;padding:40px;font-family:var(--mono);color:var(--muted);font-size:.85rem">ກຳລັງໂຫລດ...</div>
+    <div id="pu-list"></div>
+  </div><!-- /tab-premium-users -->
 
 </main>
 
@@ -1065,6 +1171,7 @@ function switchTab(name, el) {
   document.getElementById('tab-' + name).style.display = 'block';
   el.classList.add('active');
   if (name === 'requests') loadRequests();
+  if (name === 'premium-users') loadPremiumUsers();
 }
 
 // ══ PREMIUM REQUESTS ════════════════════════════════════════════════════════
@@ -1248,6 +1355,185 @@ function openSlip(reqId) {
 }
 function closeSlip() {
   document.getElementById('slip-modal').style.display = 'none';
+}
+
+// ══ PREMIUM USERS ═══════════════════════════════════════════════════════════
+let _puCache = [];
+let _unsubscribePU = null;
+
+async function loadPremiumUsers() {
+  document.getElementById('pu-loading').style.display = 'block';
+  document.getElementById('pu-list').innerHTML = '';
+  document.getElementById('pu-stats').innerHTML = '';
+
+  if (_unsubscribePU) { _unsubscribePU(); _unsubscribePU = null; }
+
+  try {
+    _unsubscribePU = db.collection('users')
+      .where('isPremium', '==', true)
+      .onSnapshot(snap => {
+        _puCache = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+        renderPremiumUsers(_puCache);
+        updatePremiumBadge(_puCache);
+      }, err => {
+        document.getElementById('pu-loading').innerHTML =
+          '<span style="color:var(--red)">❌ ' + err.message + '</span>';
+      });
+  } catch(e) {
+    document.getElementById('pu-loading').innerHTML =
+      '<span style="color:var(--red)">❌ ' + e.message + '</span>';
+  }
+}
+
+function updatePremiumBadge(list) {
+  const active = list.filter(u => isPremiumActive(u)).length;
+  const badge = document.getElementById('premium-count');
+  if (active > 0) {
+    badge.textContent = active;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function isPremiumActive(u) {
+  if (u.isPremium === true && !u.premiumUntil) return true;
+  if (u.premiumUntil) {
+    const until = u.premiumUntil.toDate ? u.premiumUntil.toDate() : new Date(u.premiumUntil);
+    return until > new Date();
+  }
+  return false;
+}
+
+function filterPremiumUsers(search) {
+  const filter = document.getElementById('pu-filter').value;
+  let list = _puCache;
+
+  if (search && search.trim()) {
+    const q = search.toLowerCase();
+    list = list.filter(u =>
+      (u.email || '').toLowerCase().includes(q) ||
+      (u.displayName || '').toLowerCase().includes(q)
+    );
+  }
+
+  if (filter === 'active')  list = list.filter(u => isPremiumActive(u));
+  if (filter === 'expired') list = list.filter(u => !isPremiumActive(u));
+
+  renderPremiumUsers(list, false);
+}
+
+function renderPremiumUsers(list, updateStats = true) {
+  document.getElementById('pu-loading').style.display = 'none';
+
+  if (updateStats) {
+    const active  = list.filter(u => isPremiumActive(u)).length;
+    const expired = list.filter(u => !isPremiumActive(u)).length;
+    document.getElementById('pu-stats').innerHTML = `
+      <div class="pu-stat-card">
+        <div class="stat-num" style="color:var(--accent)">${list.length}</div>
+        <div class="stat-label">TOTAL PREMIUM</div>
+      </div>
+      <div class="pu-stat-card">
+        <div class="stat-num" style="color:var(--green)">${active}</div>
+        <div class="stat-label">ACTIVE</div>
+      </div>
+      <div class="pu-stat-card">
+        <div class="stat-num" style="color:var(--red)">${expired}</div>
+        <div class="stat-label">ໝົດອາຍຸ</div>
+      </div>`;
+  }
+
+  if (list.length === 0) {
+    document.getElementById('pu-list').innerHTML =
+      '<div class="pu-empty">📭 ບໍ່ພົບ User Premium</div>';
+    return;
+  }
+
+  // Sort: active first, then by expiry
+  const sorted = [...list].sort((a, b) => {
+    const aA = isPremiumActive(a);
+    const bA = isPremiumActive(b);
+    if (aA !== bA) return bA - aA;
+    const aD = a.premiumUntil ? (a.premiumUntil.toDate ? a.premiumUntil.toDate() : new Date(a.premiumUntil)) : new Date(9999,0);
+    const bD = b.premiumUntil ? (b.premiumUntil.toDate ? b.premiumUntil.toDate() : new Date(b.premiumUntil)) : new Date(9999,0);
+    return aD - bD;
+  });
+
+  const rows = sorted.map(u => {
+    const active  = isPremiumActive(u);
+    const initials = (u.displayName || u.email || '?').charAt(0).toUpperCase();
+    let expStr = '—';
+    let daysLeft = '';
+    if (u.premiumUntil) {
+      const until = u.premiumUntil.toDate ? u.premiumUntil.toDate() : new Date(u.premiumUntil);
+      expStr = until.toLocaleDateString('lo-LA', { year:'numeric', month:'short', day:'numeric' });
+      const diff = Math.ceil((until - new Date()) / (1000*60*60*24));
+      if (active && diff <= 7) {
+        daysLeft = `<span style="color:var(--accent);font-size:.68rem;font-family:var(--mono)"> ⚠️ ${diff} ວັນ</span>`;
+      } else if (active) {
+        daysLeft = `<span style="color:var(--muted);font-size:.68rem;font-family:var(--mono)"> (${diff} ວັນ)</span>`;
+      }
+    }
+
+    return `
+    <tr class="${active ? '' : 'expired'}">
+      <td>
+        <div style="display:flex;align-items:center">
+          <div class="pu-avatar-sm">${initials}</div>
+          <div>
+            <div style="font-weight:600;font-size:.88rem">${u.displayName || '(ບໍ່ມີຊື່)'}</div>
+            <div style="font-family:var(--mono);font-size:.7rem;color:var(--muted)">${u.email || u.uid}</div>
+          </div>
+        </div>
+      </td>
+      <td>
+        <span class="status-pill ${active ? 'active' : 'expired'}">
+          ${active ? '✅ Active' : '❌ ໝົດອາຍຸ'}
+        </span>
+      </td>
+      <td style="font-family:var(--mono);font-size:.78rem">
+        ${expStr}${daysLeft}
+      </td>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--muted)">
+        ${u.usageCount || 0} ຄັ້ງ
+      </td>
+      <td>
+        <div style="display:flex;gap:6px">
+          <button class="btn-sm-action" onclick="quickSearch('${u.email || u.uid}'); switchTab('search', document.querySelector('.tab-btn'))">✏️ ແກ້ໄຂ</button>
+          <button class="btn-sm-action btn-sm-revoke" onclick="revokeFromList('${u.uid}', '${u.email || u.uid}')">❌ ຍົກເລີກ</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('pu-list').innerHTML = `
+    <div style="overflow-x:auto">
+    <table class="pu-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>ສະຖານະ</th>
+          <th>ໝົດອາຍຸ</th>
+          <th>Usage</th>
+          <th>ຈັດການ</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div>`;
+}
+
+async function revokeFromList(uid, label) {
+  if (!confirm('ຍົກເລີກ Premium ຂອງ ' + label + ' ແທ້ບໍ?')) return;
+  try {
+    await db.collection('users').doc(uid).set(
+      { isPremium: false, premiumUntil: null }, { merge: true }
+    );
+    showToast('ຍົກເລີກ Premium ຂອງ ' + label + ' ແລ້ວ', 'error');
+  } catch(e) {
+    showToast('❌ ເກີດຂໍ້ຜິດພາດ: ' + e.message, 'error');
+  }
 }
 
 // ── Realtime badge listener ─────────────────────────────────────────────────
