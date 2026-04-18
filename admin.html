@@ -826,6 +826,48 @@
       border-bottom: 1px solid rgba(30,35,48,.4);
     }
     .exp-item:last-child { border-bottom: none; }
+
+    /* ── ALL USERS TABLE ── */
+    .au-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .84rem;
+    }
+    .au-table th {
+      font-family: var(--mono);
+      font-size: .65rem;
+      color: var(--muted);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    .au-table th:hover { color: var(--accent); }
+    .au-table td {
+      padding: 11px 14px;
+      border-bottom: 1px solid rgba(30,35,48,.5);
+      vertical-align: middle;
+    }
+    .au-table tr:hover td { background: rgba(245,200,66,.02); }
+    .au-user-cell { display: flex; align-items: center; gap: 10px; }
+    .au-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: .72rem; font-weight: 700; color: #000; flex-shrink: 0;
+    }
+    .au-avatar.free { background: linear-gradient(135deg, #4b5563, #374151); color: #9ca3af; }
+    .au-name  { font-weight: 600; font-size: .85rem; }
+    .au-email { font-family: var(--mono); font-size: .68rem; color: var(--muted); }
+    .pill-prem { background: rgba(245,200,66,.12); color: var(--accent); border: 1px solid rgba(245,200,66,.25); border-radius: 10px; font-family: var(--mono); font-size: .65rem; padding: 3px 8px; white-space: nowrap; }
+    .pill-free { background: rgba(107,114,128,.1); color: var(--muted); border: 1px solid var(--border); border-radius: 10px; font-family: var(--mono); font-size: .65rem; padding: 3px 8px; }
+    .pill-exp  { background: rgba(224,92,92,.1); color: var(--red); border: 1px solid rgba(224,92,92,.2); border-radius: 10px; font-family: var(--mono); font-size: .65rem; padding: 3px 8px; }
+    .au-usage-bar { width: 60px; background: var(--border); border-radius: 3px; height: 5px; display: inline-block; vertical-align: middle; }
+    .au-usage-fill { height: 5px; border-radius: 3px; background: var(--accent); }
   </style>
 </head>
 <body>
@@ -870,6 +912,7 @@
     <button class="tab-btn" onclick="switchTab('requests', this)">📋 ຄຳຂໍ Premium <span id="pending-count" class="pending-badge" style="display:none"></span></button>
     <button class="tab-btn" onclick="switchTab('premium-users', this)">👑 Premium Users <span id="premium-count" class="pending-badge" style="background:var(--green);display:none"></span></button>
     <button class="tab-btn" onclick="switchTab('revenue', this)">💰 ລາຍຮັບ</button>
+    <button class="tab-btn" onclick="switchTab('all-users', this)">👥 Users ທັງໝົດ</button>
     <button class="tab-btn" onclick="switchTab('logs', this)">📝 ປະຫວັດ</button>
   </div>
 
@@ -1085,6 +1128,33 @@
       <div id="rev-list"></div>
     </div>
   </div><!-- /tab-revenue -->
+
+  <!-- TAB: ALL USERS -->
+  <div id="tab-all-users" class="tab-panel" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div class="section-label">👥 Users ທັງໝົດ</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="au-search" type="text" placeholder="ຄົ້ນຫາ Email / ຊື່..."
+          oninput="filterAllUsers()"
+          style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:var(--mono);font-size:.78rem;outline:none;width:180px">
+        <select id="au-filter" onchange="filterAllUsers()"
+          style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-family:var(--mono);font-size:.75rem;outline:none">
+          <option value="all">ທັງໝົດ</option>
+          <option value="premium">👑 Premium</option>
+          <option value="free">🆓 Free</option>
+        </select>
+        <button onclick="exportAllUsers()"
+          style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--accent);font-family:var(--mono);font-size:.75rem;cursor:pointer">
+          📥 Export
+        </button>
+      </div>
+    </div>
+    <!-- SUMMARY STATS -->
+    <div id="au-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px"></div>
+    <!-- TABLE -->
+    <div id="au-loading" style="text-align:center;padding:40px;font-family:var(--mono);color:var(--muted);font-size:.85rem">ກຳລັງໂຫລດ...</div>
+    <div id="au-list"></div>
+  </div><!-- /tab-all-users -->
 
   <!-- TAB: LOGS -->
   <div id="tab-logs" class="tab-panel" style="display:none">
@@ -1401,6 +1471,7 @@ function switchTab(name, el) {
   if (name === 'premium-users') loadPremiumUsers();
   if (name === 'revenue')       loadRevenue();
   if (name === 'logs')          renderLogs();
+  if (name === 'all-users')    loadAllUsers();
   resetAutoLock();
 }
 
@@ -2258,6 +2329,231 @@ function unlockScreen() {
   document.getElementById('lock-screen').style.display = 'none';
   resetAutoLock();
   addLog('info', '🔓 Unlock ໜ້າຈໍ');
+}
+
+
+// ══ ALL USERS ════════════════════════════════════════════════════════════════
+let _allUsersCache = [];
+let _auSortCol     = 'createdAt';
+let _auSortAsc     = false;
+
+async function loadAllUsers() {
+  document.getElementById('au-loading').style.display = 'block';
+  document.getElementById('au-list').innerHTML = '';
+  document.getElementById('au-stats').innerHTML = '';
+
+  try {
+    const snap = await db.collection('users').get();
+    _allUsersCache = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    renderAllUsersStats(_allUsersCache);
+    filterAllUsers();
+    addLog('info', '👥 ດຶງ Users ທັງໝົດ: ' + _allUsersCache.length + ' ຄົນ');
+  } catch(e) {
+    document.getElementById('au-loading').style.display = 'none';
+    document.getElementById('au-list').innerHTML =
+      '<div style="text-align:center;padding:30px;color:var(--red);font-family:var(--mono);font-size:.85rem">❌ ' + e.message + '</div>';
+  }
+}
+
+function renderAllUsersStats(list) {
+  const premium  = list.filter(u => isPremiumActive(u)).length;
+  const free     = list.length - premium;
+  const expiring = list.filter(u => {
+    if (!u.premiumUntil) return false;
+    const until = u.premiumUntil.toDate ? u.premiumUntil.toDate() : new Date(u.premiumUntil);
+    const days  = Math.ceil((until - new Date()) / (1000*60*60*24));
+    return days >= 0 && days <= 7;
+  }).length;
+
+  document.getElementById('au-stats').innerHTML = `
+    <div class="pu-stat-card">
+      <div class="stat-num" style="color:var(--text)">${list.length.toLocaleString()}</div>
+      <div class="stat-label">USERS ທັງໝົດ</div>
+    </div>
+    <div class="pu-stat-card">
+      <div class="stat-num" style="color:var(--accent)">${premium}</div>
+      <div class="stat-label">👑 PREMIUM</div>
+    </div>
+    <div class="pu-stat-card">
+      <div class="stat-num" style="color:var(--muted)">${free}</div>
+      <div class="stat-label">🆓 FREE</div>
+    </div>`;
+}
+
+function filterAllUsers() {
+  const search = (document.getElementById('au-search').value || '').toLowerCase();
+  const filter = document.getElementById('au-filter').value;
+
+  let list = _allUsersCache;
+
+  if (search) {
+    list = list.filter(u =>
+      (u.email       || '').toLowerCase().includes(search) ||
+      (u.displayName || '').toLowerCase().includes(search) ||
+      (u.uid         || '').toLowerCase().includes(search)
+    );
+  }
+  if (filter === 'premium') list = list.filter(u => isPremiumActive(u));
+  if (filter === 'free')    list = list.filter(u => !isPremiumActive(u));
+
+  renderAllUsersTable(list);
+}
+
+function sortAllUsers(col) {
+  if (_auSortCol === col) {
+    _auSortAsc = !_auSortAsc;
+  } else {
+    _auSortCol = col;
+    _auSortAsc = true;
+  }
+  filterAllUsers();
+}
+
+function renderAllUsersTable(list) {
+  document.getElementById('au-loading').style.display = 'none';
+
+  // Sort
+  const sorted = [...list].sort((a, b) => {
+    let av, bv;
+    switch(_auSortCol) {
+      case 'name':
+        av = (a.displayName || a.email || '').toLowerCase();
+        bv = (b.displayName || b.email || '').toLowerCase();
+        break;
+      case 'usage':
+        av = a.usageCount || 0;
+        bv = b.usageCount || 0;
+        break;
+      case 'expire':
+        av = a.premiumUntil ? (a.premiumUntil.toDate ? a.premiumUntil.toDate() : new Date(a.premiumUntil)) : new Date(0);
+        bv = b.premiumUntil ? (b.premiumUntil.toDate ? b.premiumUntil.toDate() : new Date(b.premiumUntil)) : new Date(0);
+        break;
+      default:
+        av = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt)) : new Date(0);
+        bv = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt)) : new Date(0);
+    }
+    if (av < bv) return _auSortAsc ? -1 : 1;
+    if (av > bv) return _auSortAsc ? 1  : -1;
+    return 0;
+  });
+
+  if (sorted.length === 0) {
+    document.getElementById('au-list').innerHTML =
+      '<div style="text-align:center;padding:40px;font-family:var(--mono);color:var(--muted)">📭 ບໍ່ພົບ User</div>';
+    return;
+  }
+
+  const sortArrow = (col) => _auSortCol === col ? (_auSortAsc ? ' ↑' : ' ↓') : '';
+
+  const rows = sorted.map((u, idx) => {
+    const prem    = isPremiumActive(u);
+    const ini     = (u.displayName || u.email || '?').charAt(0).toUpperCase();
+    const usage   = u.usageCount || 0;
+    const pct     = Math.min((usage / 20) * 100, 100);
+    const created = u.createdAt
+      ? (u.createdAt.toDate ? u.createdAt.toDate() : new Date(u.createdAt)).toLocaleDateString('lo-LA', {year:'numeric', month:'short', day:'numeric'})
+      : '—';
+
+    let expStr = '—';
+    let expClass = '';
+    if (u.premiumUntil) {
+      const until = u.premiumUntil.toDate ? u.premiumUntil.toDate() : new Date(u.premiumUntil);
+      const days  = Math.ceil((until - new Date()) / (1000*60*60*24));
+      expStr = until.toLocaleDateString('lo-LA', {year:'numeric', month:'short', day:'numeric'});
+      if (!prem) expClass = 'pill-exp';
+      else if (days <= 7) expStr += ' ⚠️';
+    }
+
+    let statusPill;
+    if (u.isPremium === true && !u.premiumUntil) {
+      statusPill = '<span class="pill-prem">👑 ຕະຫຼອດໄປ</span>';
+    } else if (prem) {
+      statusPill = '<span class="pill-prem">👑 Premium</span>';
+    } else if (u.isPremium && !prem) {
+      statusPill = '<span class="pill-exp">❌ ໝົດອາຍຸ</span>';
+    } else {
+      statusPill = '<span class="pill-free">🆓 Free</span>';
+    }
+
+    return `
+    <tr>
+      <td style="font-family:var(--mono);font-size:.68rem;color:var(--muted)">${idx+1}</td>
+      <td>
+        <div class="au-user-cell">
+          <div class="au-avatar ${prem?'':'free'}">${ini}</div>
+          <div>
+            <div class="au-name">${u.displayName || '(ບໍ່ມີຊື່)'}</div>
+            <div class="au-email">${u.email || u.uid}</div>
+          </div>
+        </div>
+      </td>
+      <td>${statusPill}</td>
+      <td style="font-family:var(--mono);font-size:.75rem">${expStr}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="au-usage-bar">
+            <div class="au-usage-fill" style="width:${pct}%;background:${pct>=100?'var(--red)':'var(--accent)'}"></div>
+          </div>
+          <span style="font-family:var(--mono);font-size:.72rem;color:${pct>=100?'var(--red)':'var(--muted)'}">${usage}/20</span>
+        </div>
+      </td>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--muted)">${created}</td>
+      <td>
+        <div style="display:flex;gap:6px">
+          <button class="btn-sm-action" onclick="quickSearch('${u.email||u.uid}'); switchTab('search', document.querySelector('.tab-btn:nth-child(2)'))">✏️</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('au-list').innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:.72rem;color:var(--muted)">
+        ສະແດງ ${sorted.length} / ${_allUsersCache.length} ຄົນ
+      </div>
+      <div style="overflow-x:auto">
+        <table class="au-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th onclick="sortAllUsers('name')" title="ຈັດລຽງຕາມຊື່">User${sortArrow('name')}</th>
+              <th>ສະຖານະ</th>
+              <th onclick="sortAllUsers('expire')" title="ຈັດລຽງຕາມວັນໝົດ">ໝົດອາຍຸ${sortArrow('expire')}</th>
+              <th onclick="sortAllUsers('usage')" title="ຈັດລຽງຕາມການໃຊ້">Usage${sortArrow('usage')}</th>
+              <th onclick="sortAllUsers('createdAt')" title="ຈັດລຽງຕາມວັນສ້າງ">ສ້າງໃນ${sortArrow('createdAt')}</th>
+              <th>ຈັດການ</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+async function exportAllUsers() {
+  showToast('📥 ກຳລັງ Export Users...', 'success');
+  try {
+    let csv = '\uFEFFລຳດັບ,ຊື່,Email,UID,ສະຖານະ,ໝົດອາຍຸ,UsageCount,ສ້າງໃນ\n';
+    _allUsersCache.forEach((u, i) => {
+      const prem  = isPremiumActive(u) ? 'Premium' : 'Free';
+      const until = u.premiumUntil
+        ? (u.premiumUntil.toDate ? u.premiumUntil.toDate() : new Date(u.premiumUntil)).toLocaleDateString('th-TH')
+        : '—';
+      const created = u.createdAt
+        ? (u.createdAt.toDate ? u.createdAt.toDate() : new Date(u.createdAt)).toLocaleDateString('th-TH')
+        : '—';
+      csv += `${i+1},"${u.displayName||''}","${u.email||''}","${u.uid}","${prem}","${until}","${u.usageCount||0}","${created}"\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'users_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click(); URL.revokeObjectURL(url);
+    addLog('info', '📥 Export Users: ' + _allUsersCache.length + ' ຄົນ');
+    showToast('✅ Export ສຳເລັດ!', 'success');
+  } catch(e) {
+    showToast('❌ ' + e.message, 'error');
+  }
 }
 
 </script>
