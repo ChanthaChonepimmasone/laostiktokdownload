@@ -770,6 +770,62 @@
       height: 100%;
       transition: width .6s ease;
     }
+
+    /* ── DASHBOARD ── */
+    .dash-stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+    .dash-stat::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .dash-stat.gold::before   { background: var(--accent); }
+    .dash-stat.green::before  { background: var(--green); }
+    .dash-stat.red::before    { background: var(--red); }
+    .dash-stat.blue::before   { background: #60a5fa; }
+    .dash-stat .ds-icon  { font-size: 1.6rem; margin-bottom: 10px; }
+    .dash-stat .ds-num   { font-family: var(--mono); font-size: 1.8rem; font-weight: 700; margin-bottom: 4px; }
+    .dash-stat .ds-label { font-family: var(--mono); font-size: .68rem; color: var(--muted); letter-spacing: .06em; }
+    .dash-stat .ds-sub   { font-family: var(--mono); font-size: .72rem; color: var(--muted); margin-top: 6px; }
+
+    /* ── LOG ── */
+    .log-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(30,35,48,.5);
+      animation: slideUp .25s ease;
+    }
+    .log-item:last-child { border-bottom: none; }
+    .log-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      margin-top: 5px;
+      flex-shrink: 0;
+    }
+    .log-dot.success { background: var(--green); }
+    .log-dot.error   { background: var(--red); }
+    .log-dot.info    { background: var(--accent); }
+    .log-time { font-family: var(--mono); font-size: .68rem; color: var(--muted); white-space: nowrap; }
+    .log-msg  { font-family: var(--mono); font-size: .78rem; flex: 1; }
+
+    /* ── EXPIRING ── */
+    .exp-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 18px;
+      border-bottom: 1px solid rgba(30,35,48,.4);
+    }
+    .exp-item:last-child { border-bottom: none; }
   </style>
 </head>
 <body>
@@ -809,14 +865,61 @@
 <main>
   <!-- TABS -->
   <div class="tab-nav">
-    <button class="tab-btn active" onclick="switchTab('search', this)">🔍 ຄົ້ນຫາ User</button>
+    <button class="tab-btn active" onclick="switchTab('dashboard', this)">📊 Dashboard</button>
+    <button class="tab-btn" onclick="switchTab('search', this)">🔍 ຄົ້ນຫາ User</button>
     <button class="tab-btn" onclick="switchTab('requests', this)">📋 ຄຳຂໍ Premium <span id="pending-count" class="pending-badge" style="display:none"></span></button>
     <button class="tab-btn" onclick="switchTab('premium-users', this)">👑 Premium Users <span id="premium-count" class="pending-badge" style="background:var(--green);display:none"></span></button>
     <button class="tab-btn" onclick="switchTab('revenue', this)">💰 ລາຍຮັບ</button>
+    <button class="tab-btn" onclick="switchTab('logs', this)">📝 ປະຫວັດ</button>
   </div>
 
+  <!-- TAB: DASHBOARD -->
+  <div id="tab-dashboard" class="tab-panel">
+    <!-- ALERT: expiring soon -->
+    <div id="dash-alert" style="display:none;background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.3);border-radius:12px;padding:14px 18px;margin-bottom:20px;font-family:var(--mono);font-size:.82rem;color:var(--accent)"></div>
+
+    <!-- STAT GRID -->
+    <div id="dash-stats" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px"></div>
+
+    <!-- QUICK ACTIONS -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:20px">
+      <div class="section-label" style="margin-bottom:14px">⚡ ດຳເນີນການດ່ວນ</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+        <button class="btn-upgrade" style="font-size:.82rem;padding:12px" onclick="switchTab('requests', document.querySelectorAll('.tab-btn')[2])">
+          📋 ກວດຄຳຂໍ Premium
+        </button>
+        <button class="btn-upgrade" style="font-size:.82rem;padding:12px;background:linear-gradient(135deg,#3ecf8e,#2aa876)" onclick="switchTab('revenue', document.querySelectorAll('.tab-btn')[4])">
+          💰 ເບິ່ງລາຍຮັບ
+        </button>
+        <button class="btn-upgrade" style="font-size:.82rem;padding:12px;background:linear-gradient(135deg,#6b7280,#4b5563)" onclick="exportAllData()">
+          📥 Export Excel
+        </button>
+        <button class="btn-upgrade" style="font-size:.82rem;padding:12px;background:linear-gradient(135deg,#e07b39,#c85d20)" onclick="switchTab('premium-users', document.querySelectorAll('.tab-btn')[3])">
+          👑 Premium Users
+        </button>
+      </div>
+    </div>
+
+    <!-- EXPIRING SOON -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div class="section-label">⚠️ ໃກ້ໝົດອາຍຸ (7 ວັນ)</div>
+        <span id="expiring-count" style="font-family:var(--mono);font-size:.72rem;color:var(--accent)"></span>
+      </div>
+      <div id="dash-expiring"></div>
+    </div>
+
+    <!-- RECENT ACTIVITY -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--border)">
+        <div class="section-label">🕐 ກິດຈະກຳຫຼ້າສຸດ</div>
+      </div>
+      <div id="dash-recent-activity"></div>
+    </div>
+  </div><!-- /tab-dashboard -->
+
   <!-- TAB: SEARCH -->
-  <div id="tab-search" class="tab-panel">
+  <div id="tab-search" class="tab-panel" style="display:none">
   <!-- SEARCH -->
   <div class="section-label">ຄົ້ນຫາ User</div>
   <div class="search-wrap">
@@ -983,7 +1086,24 @@
     </div>
   </div><!-- /tab-revenue -->
 
+  <!-- TAB: LOGS -->
+  <div id="tab-logs" class="tab-panel" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div class="section-label">📝 ປະຫວັດການດຳເນີນງານ</div>
+      <button onclick="clearLogs()" style="font-family:var(--mono);font-size:.72rem;background:none;border:1px solid var(--red);color:var(--red);padding:6px 14px;border-radius:8px;cursor:pointer">🗑️ ລຶບທັງໝົດ</button>
+    </div>
+    <div id="logs-list"></div>
+  </div><!-- /tab-logs -->
+
 </main>
+
+<!-- LOCK SCREEN -->
+<div id="lock-screen" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(13,15,20,.97);align-items:center;justify-content:center;flex-direction:column;gap:16px">
+  <div style="font-size:3rem">🔒</div>
+  <div style="color:var(--text);font-size:1.1rem;font-weight:700">ໜ້າຈໍຖືກລ໊ອກ</div>
+  <div style="color:var(--muted);font-size:.9rem;font-family:var(--mono)">ກົດ Unlock ເພື່ອດຳເນີນຕໍ່</div>
+  <button onclick="unlockScreen()" style="background:var(--accent);color:#000;border:none;border-radius:12px;padding:14px 32px;font-family:var(--mono);font-size:.9rem;font-weight:700;cursor:pointer;margin-top:8px">🔓 Unlock</button>
+</div>
 
 <!-- SLIP MODAL -->
 <div id="slip-modal" onclick="closeSlip()" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.85);align-items:center;justify-content:center;cursor:zoom-out">
@@ -1199,8 +1319,10 @@ async function doUpgrade() {
     // ບັນທຶກ Recent
     saveRecent(foundUserDoc.email || foundUid, selectedDays, until);
 
+    addLog('success', '👑 Upgrade: ' + (foundUserDoc?.email || foundUid) + ' → ' + selectedDays + ' ວັນ');
     showToast('✅ Upgrade ສຳເລັດ! ໝົດອາຍຸ ' + until.toLocaleDateString('lo-LA'), 'success');
   } catch(e) {
+    addLog('error', '❌ Upgrade ລົ້ມເຫຼວ: ' + e.message);
     showToast('❌ ເກີດຂໍ້ຜິດພາດ: ' + e.message, 'error');
   }
 
@@ -1273,10 +1395,13 @@ function switchTab(name, el) {
   document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + name).style.display = 'block';
-  el.classList.add('active');
-  if (name === 'requests') loadRequests();
+  if (el) el.classList.add('active');
+  if (name === 'dashboard')     loadDashboard();
+  if (name === 'requests')      loadRequests();
   if (name === 'premium-users') loadPremiumUsers();
-  if (name === 'revenue') loadRevenue();
+  if (name === 'revenue')       loadRevenue();
+  if (name === 'logs')          renderLogs();
+  resetAutoLock();
 }
 
 // ══ PREMIUM REQUESTS ════════════════════════════════════════════════════════
@@ -1427,6 +1552,8 @@ async function approveRequest(reqId, uid, plan) {
       { merge: true }
     );
 
+    addLog('success', '✅ Approve: ' + (r?.email || uid) + ' → ' + days + ' ວັນ');
+    notify('✅ Approved!', r?.email || uid);
     showToast('✅ Upgrade ສຳເລັດ! ໝົດອາຍຸ ' + until.toLocaleDateString('lo-LA'), 'success');
     loadRequests(); // Reload
   } catch(e) {
@@ -1443,6 +1570,7 @@ async function rejectRequest(reqId) {
         rejectedBy: auth.currentUser.email },
       { merge: true }
     );
+    addLog('error', '❌ Reject: ' + (r?.email || reqId));
     showToast('ປະຕິເສດຄຳຂໍແລ້ວ', 'error');
     loadRequests();
   } catch(e) {
@@ -1870,6 +1998,10 @@ auth.onAuthStateChanged(user => {
   if (_unsubscribeRequests) { _unsubscribeRequests(); _unsubscribeRequests = null; }
 
   if (user && ADMIN_EMAILS.includes(user.email)) {
+    // ✅ Load dashboard on login
+    loadDashboard();
+    startAutoLock();
+
     // ✅ Realtime badge — ອັບເດດທຸກຄັ້ງທີ່ມີ pending ໃໝ່
     _unsubscribeBadge = db.collection('premiumRequests')
       .where('status', '==', 'pending')
@@ -1884,6 +2016,250 @@ auth.onAuthStateChanged(user => {
       }, () => {});
   }
 });
+
+// ══ DASHBOARD ════════════════════════════════════════════════════════════════
+async function loadDashboard() {
+  document.getElementById('dash-stats').innerHTML = '<div style="grid-column:span 2;text-align:center;padding:20px;font-family:var(--mono);color:var(--muted);font-size:.82rem">ກຳລັງໂຫລດ...</div>';
+
+  try {
+    // Parallel fetch
+    const [usersSnap, pendingSnap, approvedSnap] = await Promise.all([
+      db.collection('users').get(),
+      db.collection('premiumRequests').where('status','==','pending').get(),
+      db.collection('premiumRequests').where('status','==','approved').get(),
+    ]);
+
+    const allUsers   = usersSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    const premUsers  = allUsers.filter(u => isPremiumActive(u));
+    const totalRev   = approvedSnap.docs.reduce((s, d) => s + (Number(d.data().price) || 0), 0);
+
+    // This month revenue
+    const now = new Date();
+    const thisMonthRev = approvedSnap.docs
+      .filter(d => {
+        const at = d.data().approvedAt;
+        if (!at) return false;
+        const dt = at.toDate();
+        return dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
+      })
+      .reduce((s, d) => s + (Number(d.data().price) || 0), 0);
+
+    document.getElementById('dash-stats').innerHTML = `
+      <div class="dash-stat gold">
+        <div class="ds-icon">👥</div>
+        <div class="ds-num">${allUsers.length.toLocaleString()}</div>
+        <div class="ds-label">USER ທັງໝົດ</div>
+      </div>
+      <div class="dash-stat green">
+        <div class="ds-icon">👑</div>
+        <div class="ds-num">${premUsers.length}</div>
+        <div class="ds-label">PREMIUM ACTIVE</div>
+      </div>
+      <div class="dash-stat red">
+        <div class="ds-icon">📋</div>
+        <div class="ds-num">${pendingSnap.size}</div>
+        <div class="ds-label">ລໍຖ້າອະນຸມັດ</div>
+        ${pendingSnap.size > 0 ? '<div class="ds-sub" style="color:var(--red)">⚠️ ຕ້ອງດຳເນີນການ</div>' : ''}
+      </div>
+      <div class="dash-stat blue">
+        <div class="ds-icon">💰</div>
+        <div class="ds-num" style="font-size:1.2rem">${totalRev.toLocaleString()}</div>
+        <div class="ds-label">ລາຍຮັບລວມ (ກີບ)</div>
+        <div class="ds-sub">ເດືອນນີ້: ${thisMonthRev.toLocaleString()} ກີບ</div>
+      </div>`;
+
+    // Expiring soon (<=7 days)
+    const expiring = premUsers.filter(u => {
+      if (!u.premiumUntil) return false;
+      const until = u.premiumUntil.toDate ? u.premiumUntil.toDate() : new Date(u.premiumUntil);
+      const days  = Math.ceil((until - now) / (1000*60*60*24));
+      return days >= 0 && days <= 7;
+    });
+
+    document.getElementById('expiring-count').textContent = expiring.length > 0 ? expiring.length + ' ຄົນ' : 'ບໍ່ມີ';
+
+    if (expiring.length > 0) {
+      document.getElementById('dash-alert').style.display = 'block';
+      document.getElementById('dash-alert').textContent = '⚠️ ມີ ' + expiring.length + ' ຄົນທີ່ Premium ຈະໝົດໃນ 7 ວັນ — ກົດ Tab "👑 Premium Users" ເພື່ອກວດ';
+    }
+
+    document.getElementById('dash-expiring').innerHTML = expiring.length === 0
+      ? '<div style="padding:20px;text-align:center;font-family:var(--mono);color:var(--muted);font-size:.82rem">✅ ບໍ່ມີໃຜໃກ້ໝົດ</div>'
+      : expiring.map(u => {
+          const until = u.premiumUntil.toDate ? u.premiumUntil.toDate() : new Date(u.premiumUntil);
+          const days  = Math.ceil((until - now) / (1000*60*60*24));
+          const ini   = (u.displayName || u.email || '?').charAt(0).toUpperCase();
+          return `<div class="exp-item">
+            <div class="pu-avatar-sm">${ini}</div>
+            <div style="flex:1">
+              <div style="font-size:.88rem;font-weight:600">${u.displayName || u.email}</div>
+              <div style="font-family:var(--mono);font-size:.7rem;color:var(--muted)">${u.email || u.uid}</div>
+            </div>
+            <div style="font-family:var(--mono);font-size:.78rem;color:${days<=3?'var(--red)':'var(--accent)'}">
+              ⏳ ${days} ວັນ
+            </div>
+          </div>`;
+        }).join('');
+
+    // Recent activity (last 5 approved/rejected)
+    const recentActs = approvedSnap.docs
+      .map(d => ({ ...d.data(), _type: 'approved' }))
+      .sort((a, b) => {
+        const at = a.approvedAt ? a.approvedAt.toDate() : new Date(0);
+        const bt = b.approvedAt ? b.approvedAt.toDate() : new Date(0);
+        return bt - at;
+      })
+      .slice(0, 5);
+
+    document.getElementById('dash-recent-activity').innerHTML = recentActs.length === 0
+      ? '<div style="padding:20px;text-align:center;font-family:var(--mono);color:var(--muted);font-size:.82rem">ບໍ່ມີກິດຈະກຳ</div>'
+      : recentActs.map(r => {
+          const dt = r.approvedAt ? r.approvedAt.toDate().toLocaleDateString('lo-LA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+          return `<div class="rev-row">
+            <div class="rev-avatar-xs">${(r.displayName||r.email||'?').charAt(0).toUpperCase()}</div>
+            <div style="flex:1">
+              <div style="font-size:.85rem;font-weight:600">${r.displayName||r.email||r.uid}</div>
+              <div style="font-family:var(--mono);font-size:.7rem;color:var(--muted)">${dt}</div>
+            </div>
+            <div style="font-family:var(--mono);font-size:.78rem;color:var(--green)">✅ Approved</div>
+          </div>`;
+        }).join('');
+
+  } catch(e) {
+    document.getElementById('dash-stats').innerHTML = '<div style="grid-column:span 2;color:var(--red);font-family:var(--mono);font-size:.82rem;text-align:center;padding:20px">❌ ' + e.message + '</div>';
+  }
+}
+
+// ══ LOGS ═════════════════════════════════════════════════════════════════════
+let _logs = JSON.parse(localStorage.getItem('admin_logs') || '[]');
+
+function addLog(type, msg) {
+  const entry = {
+    type,
+    msg,
+    time: new Date().toLocaleString('lo-LA'),
+    ts: Date.now()
+  };
+  _logs.unshift(entry);
+  if (_logs.length > 100) _logs = _logs.slice(0, 100);
+  localStorage.setItem('admin_logs', JSON.stringify(_logs));
+}
+
+function renderLogs() {
+  const container = document.getElementById('logs-list');
+  if (_logs.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;font-family:var(--mono);color:var(--muted);font-size:.85rem">📝 ຍັງບໍ່ມີປະຫວັດ</div>';
+    return;
+  }
+  container.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+      ${_logs.map(l => `
+        <div class="log-item">
+          <div class="log-dot ${l.type}"></div>
+          <div class="log-msg">${l.msg}</div>
+          <div class="log-time">${l.time}</div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function clearLogs() {
+  if (!confirm('ລຶບປະຫວັດທັງໝົດ?')) return;
+  _logs = [];
+  localStorage.removeItem('admin_logs');
+  renderLogs();
+}
+
+// ══ NOTIFICATION ══════════════════════════════════════════════════════════════
+function notify(title, body) {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'granted') {
+    new Notification(title, { body, icon: '🎤' });
+  } else if (Notification.permission !== 'denied') {
+    Notification.requestPermission().then(p => {
+      if (p === 'granted') new Notification(title, { body });
+    });
+  }
+}
+
+// Request notification permission on load
+setTimeout(() => {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}, 3000);
+
+// ══ EXPORT EXCEL ══════════════════════════════════════════════════════════════
+async function exportAllData() {
+  showToast('📥 ກຳລັງ Export...', 'success');
+  try {
+    const [usersSnap, reqSnap] = await Promise.all([
+      db.collection('users').where('isPremium','==',true).get(),
+      db.collection('premiumRequests').where('status','==','approved').get(),
+    ]);
+
+    // Build CSV for Premium Users
+    let csv = 'ຊື່,Email,UID,ສະຖານະ,ໝົດອາຍຸ,ການໃຊ້ງານ\n';
+    usersSnap.docs.forEach(d => {
+      const u     = d.data();
+      const until = u.premiumUntil ? (u.premiumUntil.toDate ? u.premiumUntil.toDate().toLocaleDateString('th-TH') : u.premiumUntil) : 'ບໍ່ຈຳກັດ';
+      const prem  = isPremiumActive(u) ? 'Active' : 'ໝົດອາຍຸ';
+      csv += `"${u.displayName||''}","${u.email||d.id}","${d.id}","${prem}","${until}","${u.usageCount||0}"\n`;
+    });
+
+    csv += '\n\nລາຍຮັບ\nວັນທີ,ຊື່,Email,Plan,ຈຳນວນ (ກີບ)\n';
+    reqSnap.docs
+      .sort((a,b) => (b.data().approvedAt?.toDate()||new Date(0)) - (a.data().approvedAt?.toDate()||new Date(0)))
+      .forEach(d => {
+        const r = d.data();
+        const dt = r.approvedAt ? r.approvedAt.toDate().toLocaleDateString('th-TH') : '—';
+        const plan = r.plan === 'monthly' ? '1 ເດືອນ' : '1 ປີ';
+        csv += `"${dt}","${r.displayName||''}","${r.email||''}","${plan}","${r.price||0}"\n`;
+      });
+
+    // Download
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'laokaraoke_report_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+
+    addLog('info', '📥 Export ສຳເລັດ: ' + usersSnap.size + ' Premium users, ' + reqSnap.size + ' ລາຍການ');
+    showToast('✅ Export ສຳເລັດ!', 'success');
+  } catch(e) {
+    showToast('❌ Export ລົ້ມເຫຼວ: ' + e.message, 'error');
+  }
+}
+
+// ══ AUTO LOCK (30 ນາທີ) ══════════════════════════════════════════════════════
+let _lockTimer = null;
+const LOCK_TIMEOUT = 30 * 60 * 1000; // 30 min
+
+function startAutoLock() {
+  resetAutoLock();
+  ['click','keydown','mousemove','touchstart'].forEach(ev =>
+    document.addEventListener(ev, resetAutoLock, { passive: true })
+  );
+}
+
+function resetAutoLock() {
+  clearTimeout(_lockTimer);
+  _lockTimer = setTimeout(lockScreen, LOCK_TIMEOUT);
+}
+
+function lockScreen() {
+  const ls = document.getElementById('lock-screen');
+  ls.style.display = 'flex';
+  addLog('info', '🔒 ລ໊ອກໜ້າຈໍອັດຕະໂນມັດ');
+}
+
+function unlockScreen() {
+  document.getElementById('lock-screen').style.display = 'none';
+  resetAutoLock();
+  addLog('info', '🔓 Unlock ໜ້າຈໍ');
+}
+
 </script>
 </body>
 </html>
