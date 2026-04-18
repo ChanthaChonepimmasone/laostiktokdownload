@@ -1135,7 +1135,7 @@
       <div class="section-label">👥 Users ທັງໝົດ</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <input id="au-search" type="text" placeholder="ຄົ້ນຫາ Email / ຊື່..."
-          oninput="filterAllUsers()"
+          oninput="filterAllUsersDebounced()"
           style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:var(--mono);font-size:.78rem;outline:none;width:180px">
         <select id="au-filter" onchange="filterAllUsers()"
           style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-family:var(--mono);font-size:.75rem;outline:none">
@@ -1239,6 +1239,21 @@ async function loginGoogle() {
 }
 
 // ══ SEARCH ══════════════════════════════════════════════════════════════════
+// Cache ສຳລັບຄົ້ນຫາໄວ: email → { uid, data }
+const _searchCache = new Map();
+
+function _cacheUser(uid, data) {
+  if (data.email) _searchCache.set(data.email.toLowerCase(), { uid, data });
+  _searchCache.set(uid, { uid, data });
+}
+
+// Pre-warm cache ຈາກ _allUsersCache ຖ້າມີ
+function _warmSearchCache() {
+  if (typeof _allUsersCache !== 'undefined') {
+    _allUsersCache.forEach(u => _cacheUser(u.uid, u));
+  }
+}
+
 async function searchUser() {
   const raw = document.getElementById('search-input').value.trim();
   if (!raw) return;
@@ -1253,7 +1268,20 @@ async function searchUser() {
   foundUid     = null;
 
   try {
-    // ລອງຄົ້ນຫາດ້ວຍ Email ກ່ອນ
+    // ① ຄົ້ນຫາຈາກ cache ກ່ອນ (ໄວທີ່ສຸດ — 0ms)
+    _warmSearchCache();
+    const key = raw.toLowerCase();
+    const cached = _searchCache.get(key) || _searchCache.get(raw);
+    if (cached) {
+      foundUid     = cached.uid;
+      foundUserDoc = cached.data;
+      showUserCard(foundUid, foundUserDoc);
+      btn.disabled = false;
+      btn.textContent = '🔍 ຄົ້ນຫາ';
+      return;
+    }
+
+    // ② Query Firestore (email ກ່ອນ, ຈາກນັ້ນ UID)
     const snap = await db.collection('users')
       .where('email', '==', raw)
       .limit(1)
@@ -1262,6 +1290,7 @@ async function searchUser() {
     if (!snap.empty) {
       foundUid     = snap.docs[0].id;
       foundUserDoc = snap.docs[0].data();
+      _cacheUser(foundUid, foundUserDoc); // ບັນທຶກ cache ສຳລັບຄັ້ງຕໍ່ໄປ
       showUserCard(foundUid, foundUserDoc);
     } else {
       // ລອງດ້ວຍ UID
@@ -1269,6 +1298,7 @@ async function searchUser() {
       if (doc.exists) {
         foundUid     = raw;
         foundUserDoc = doc.data();
+        _cacheUser(foundUid, foundUserDoc);
         showUserCard(foundUid, foundUserDoc);
       } else {
         document.getElementById('not-found').style.display = 'block';
@@ -2336,6 +2366,7 @@ function unlockScreen() {
 let _allUsersCache = [];
 let _auSortCol     = 'createdAt';
 let _auSortAsc     = false;
+let _auFilterTimer = null; // debounce timer
 
 async function loadAllUsers() {
   document.getElementById('au-loading').style.display = 'block';
@@ -2345,6 +2376,8 @@ async function loadAllUsers() {
   try {
     const snap = await db.collection('users').get();
     _allUsersCache = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    // ອັບເດດ search cache ດ້ວຍຂໍ້ມູນທີ່ໂຫລດໄດ້
+    _allUsersCache.forEach(u => _cacheUser(u.uid, u));
     renderAllUsersStats(_allUsersCache);
     filterAllUsers();
     addLog('info', '👥 ດຶງ Users ທັງໝົດ: ' + _allUsersCache.length + ' ຄົນ');
@@ -2397,6 +2430,11 @@ function filterAllUsers() {
   if (filter === 'free')    list = list.filter(u => !isPremiumActive(u));
 
   renderAllUsersTable(list);
+}
+
+function filterAllUsersDebounced() {
+  clearTimeout(_auFilterTimer);
+  _auFilterTimer = setTimeout(filterAllUsers, 200);
 }
 
 function sortAllUsers(col) {
