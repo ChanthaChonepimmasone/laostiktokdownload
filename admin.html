@@ -100,7 +100,11 @@
       transition: all .2s;
     }
     .btn-logout:hover { border-color: var(--red); color: var(--red); }
-    /* ── NOTIFICATION BUTTON ── */
+    @keyframes pulse {
+      0%,100% { opacity:1; }
+      50%      { opacity:.35; }
+    }
+        /* ── NOTIFICATION BUTTON ── */
     .btn-notif {
       font-family: var(--mono);
       font-size: .72rem;
@@ -905,6 +909,14 @@
     <button class="btn-notif" id="btn-notif" onclick="toggleNotification()" title="ເປີດ/ປິດ ການແຈ້ງເຕືອນ">
       🔔 <span id="notif-label">ເປີດແຈ້ງເຕືອນ</span>
     </button>
+    <span id="realtime-dot" title="Realtime connected" style="
+      display:none;
+      width:8px;height:8px;
+      background:var(--green);
+      border-radius:50%;
+      box-shadow:0 0 6px var(--green);
+      animation:pulse 2s infinite;
+    "></span>
     <button class="btn-notif btn-tg-test" onclick="testTelegram()" title="ທົດສອບ Telegram">
       ✈️ <span>ທົດສອບ</span>
     </button>
@@ -1190,19 +1202,60 @@ let _globalFirstLoad = true;
 function startGlobalSlipListener() {
   if (_globalSlipUnsub) return; // ມີຢູ່ແລ້ວ
 
+  // ເກັບ IDs ທີ່ load ຕອນ start ເພື່ອກັ້ນ false-positive
+  let _knownIds = null;
+
   _globalSlipUnsub = db.collection('premiumRequests')
     .where('status', '==', 'pending')
     .onSnapshot(snap => {
-      if (_globalFirstLoad) { _globalFirstLoad = false; return; }
+
+      // ── ຄັ້ງທຳອິດ: record IDs ທີ່ມີຢູ່ແລ້ວ (ຢ່າ notify)
+      if (_knownIds === null) {
+        _knownIds = new Set(snap.docs.map(d => d.id));
+
+        // ອັບເດດ badge ທັນທີ
+        _updatePendingBadge(snap.size);
+        _globalFirstLoad = false;
+        return;
+      }
+
+      // ── ຄັ້ງຕໍ່ໄປ: ກວດ doc ທີ່ "added" ຈິງໆ
       snap.docChanges().forEach(change => {
-        if (change.type === 'added') {
+        if (change.type === 'added' && !_knownIds.has(change.doc.id)) {
           const r = change.doc.data();
-          fireNotification(r);
+          _knownIds.add(change.doc.id);
+          fireNotification(r); // 🔔 Browser + Telegram + Banner + Sound
+        }
+        if (change.type === 'removed') {
+          _knownIds.delete(change.doc.id);
         }
       });
+
+      // ອັບເດດ badge ທຸກຄັ້ງ
+      _updatePendingBadge(snap.size);
+
     }, err => {
-      console.warn('Global slip listener error:', err.message);
+      console.warn('Realtime listener error:', err.message);
+      // retry ໃນ 5 ວິ
+      setTimeout(() => {
+        _globalSlipUnsub = null;
+        startGlobalSlipListener();
+      }, 5000);
     });
+}
+
+function _updatePendingBadge(count) {
+  const badge = document.getElementById('pending-count');
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = count;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+  // ສະແດງ dot ຕອນ listener ເຊື່ອມຕໍ່ສຳເລັດ
+  const dot = document.getElementById('realtime-dot');
+  if (dot) dot.style.display = 'inline-block';
 }
 
 // ══ NOTIFICATIONS ═══════════════════════════════════════════════════════════
@@ -1685,28 +1738,9 @@ function loadRequests() {
         _reqCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderRequests(_reqCache);
 
-        // ອັບເດດ badge
-        const pendingCount = _reqCache.filter(r => r.status === 'pending').length;
-        const badge = document.getElementById('pending-count');
-        if (pendingCount > 0) {
-          badge.textContent = pendingCount;
-          badge.style.display = 'inline-block';
-        } else {
-          badge.style.display = 'none';
-        }
-
-        // ແຈ້ງເຕືອນເມື່ອມີຄຳຂໍໃໝ່
-        snap.docChanges().forEach(change => {
-          if (change.type === 'added') {
-            const r = change.doc.data();
-            if (r.status === 'pending') {
-              if (_isFirstLoad) return; // ບໍ່ແຈ້ງຕອນ load ຄັ້ງທຳອິດ
-              showToast('🔔 Slip ໃໝ່ຈາກ ' + (r.displayName || r.email || 'User'), 'success');
-              fireNotification(r); // ✅ fire push + banner + sound
-            }
-          }
-        });
-        _isFirstLoad = false; // ຫຼັງ load ຄັ້ງທຳອິດສຳເລັດ
+        // badge ຖືກຈັດການໂດຍ global listener ແລ້ວ
+        // notification ຖືກຈັດການໂດຍ global listener ແລ້ວ
+        // (ບໍ່ fire ຊ້ຳທີ່ນີ້)
 
       }, err => {
         document.getElementById('requests-loading').innerHTML =
@@ -2246,27 +2280,13 @@ async function loadRevenue() {
   }
 }
 
-// ── Realtime badge listener ─────────────────────────────────────────────────
-let _unsubscribeBadge = null;
-
+// ── Badge + Cleanup ─────────────────────────────────────────────────────────
+// Badge ຖືກຈັດການໂດຍ startGlobalSlipListener → _updatePendingBadge
+// ເມື່ອ logout ໃຫ້ຍົກເລີກ global listener
 auth.onAuthStateChanged(user => {
-  // ຍົກເລີກ listeners ເກົ່າ
-  if (_unsubscribeBadge) { _unsubscribeBadge(); _unsubscribeBadge = null; }
-  if (_unsubscribeRequests) { _unsubscribeRequests(); _unsubscribeRequests = null; }
-
-  if (user && ADMIN_EMAILS.includes(user.email)) {
-    // ✅ Realtime badge — ອັບເດດທຸກຄັ້ງທີ່ມີ pending ໃໝ່
-    _unsubscribeBadge = db.collection('premiumRequests')
-      .where('status', '==', 'pending')
-      .onSnapshot(snap => {
-        const badge = document.getElementById('pending-count');
-        if (snap.size > 0) {
-          badge.textContent = snap.size;
-          badge.style.display = 'inline-block';
-        } else {
-          badge.style.display = 'none';
-        }
-      }, () => {});
+  if (!user || !ADMIN_EMAILS.includes(user.email)) {
+    if (_globalSlipUnsub) { _globalSlipUnsub(); _globalSlipUnsub = null; }
+    if (_unsubscribeRequests) { _unsubscribeRequests(); _unsubscribeRequests = null; }
   }
 });
 </script>
