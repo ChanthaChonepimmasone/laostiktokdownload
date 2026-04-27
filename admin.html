@@ -100,6 +100,101 @@
       transition: all .2s;
     }
     .btn-logout:hover { border-color: var(--red); color: var(--red); }
+    /* ── NOTIFICATION BUTTON ── */
+    .btn-notif {
+      font-family: var(--mono);
+      font-size: .72rem;
+      background: rgba(245,200,66,.08);
+      border: 1px solid rgba(245,200,66,.3);
+      color: var(--accent);
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all .2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-notif:hover { background: rgba(245,200,66,.15); }
+    .btn-notif.off {
+      background: none;
+      border-color: var(--border);
+      color: var(--muted);
+    }
+
+    /* ── NOTIFICATION TOAST (big) ── */
+    #notif-banner {
+      display: none;
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 500;
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      border-radius: 16px;
+      padding: 18px 22px;
+      min-width: 300px;
+      max-width: 380px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.5);
+      animation: slideInRight .35s cubic-bezier(.34,1.56,.64,1);
+      cursor: pointer;
+    }
+    @keyframes slideInRight {
+      from { opacity:0; transform: translateX(40px); }
+      to   { opacity:1; transform: translateX(0); }
+    }
+    .nb-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .nb-icon { font-size: 1.4rem; }
+    .nb-title {
+      font-weight: 700;
+      font-size: .95rem;
+      color: var(--accent);
+      flex: 1;
+    }
+    .nb-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 2px 6px;
+    }
+    .nb-close:hover { color: var(--text); }
+    .nb-body { font-size: .88rem; color: var(--text); margin-bottom: 12px; }
+    .nb-meta { font-family: var(--mono); font-size: .72rem; color: var(--muted); }
+    .nb-action {
+      margin-top: 14px;
+      display: flex;
+      gap: 8px;
+    }
+    .nb-btn-view {
+      flex: 1;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      padding: 9px;
+      font-family: var(--mono);
+      font-size: .78rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .nb-btn-dismiss {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-family: var(--mono);
+      font-size: .78rem;
+      cursor: pointer;
+    }
+    .nb-btn-dismiss:hover { border-color: var(--text); color: var(--text); }
 
     /* ── LOGIN WALL ── */
     #login-wall {
@@ -801,6 +896,9 @@
   <h1>🎤 Lao Karaoke</h1>
   <div class="header-right">
     <span id="admin-info"></span>
+    <button class="btn-notif" id="btn-notif" onclick="toggleNotification()" title="ເປີດ/ປິດ ການແຈ້ງເຕືອນ">
+      🔔 <span id="notif-label">ເປີດແຈ້ງເຕືອນ</span>
+    </button>
     <button class="btn-logout" onclick="auth.signOut()">ອອກ</button>
   </div>
 </header>
@@ -1013,6 +1111,213 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
+// ══ GLOBAL SLIP LISTENER (works on any tab) ════════════════════════════════
+let _globalSlipUnsub = null;
+let _globalFirstLoad = true;
+
+function startGlobalSlipListener() {
+  if (_globalSlipUnsub) return; // ມີຢູ່ແລ້ວ
+
+  _globalSlipUnsub = db.collection('premiumRequests')
+    .where('status', '==', 'pending')
+    .onSnapshot(snap => {
+      if (_globalFirstLoad) { _globalFirstLoad = false; return; }
+      snap.docChanges().forEach(change => {
+        if (change.type === 'added') {
+          const r = change.doc.data();
+          fireNotification(r);
+        }
+      });
+    }, err => {
+      console.warn('Global slip listener error:', err.message);
+    });
+}
+
+// ══ NOTIFICATIONS ═══════════════════════════════════════════════════════════
+let _notifEnabled = localStorage.getItem('admin_notif') !== 'off';
+let _notifBannerTimer = null;
+let _notifQueue = []; // queue ສຳລັບ notification ທີ່ລໍຖ້າ
+let _isFirstLoad = true; // ປ້ອງກັນ notification ຕອນ load ຄັ້ງທຳອິດ
+
+function initNotifications() {
+  updateNotifBtn();
+
+  // ຂໍ permission ຖ້າຍັງບໍ່ໄດ້ຮັບ
+  if (_notifEnabled && 'Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().then(updateNotifBtn);
+  }
+}
+
+function updateNotifBtn() {
+  const btn   = document.getElementById('btn-notif');
+  const label = document.getElementById('notif-label');
+  if (!btn) return;
+
+  const permitted = !('Notification' in window) || Notification.permission === 'granted';
+
+  if (_notifEnabled && permitted) {
+    btn.classList.remove('off');
+    label.textContent = 'ແຈ້ງເຕືອນ: ເປີດ';
+  } else if (_notifEnabled && Notification.permission === 'denied') {
+    btn.classList.add('off');
+    label.textContent = '🚫 ຖືກບລັອກ';
+  } else {
+    btn.classList.add('off');
+    label.textContent = 'ແຈ້ງເຕືອນ: ປິດ';
+  }
+}
+
+async function toggleNotification() {
+  if (!('Notification' in window)) {
+    showToast('Browser ບໍ່ຮອງຮັບ Notification', 'error');
+    return;
+  }
+
+  if (!_notifEnabled) {
+    // ຕ້ອງການເປີດ → ຂໍ permission
+    _notifEnabled = true;
+    localStorage.setItem('admin_notif', 'on');
+    if (Notification.permission === 'default') {
+      const perm = await Notification.requestPermission();
+      if (perm === 'denied') {
+        showToast('❌ ກະລຸນາອະນຸຍາດ Notification ໃນ Browser Settings', 'error');
+      } else {
+        showToast('🔔 ເປີດການແຈ້ງເຕືອນແລ້ວ', 'success');
+        sendTestNotification();
+      }
+    } else if (Notification.permission === 'granted') {
+      showToast('🔔 ເປີດການແຈ້ງເຕືອນແລ້ວ', 'success');
+      sendTestNotification();
+    } else {
+      showToast('❌ ກະລຸນາອະນຸຍາດ Notification ໃນ Browser Settings', 'error');
+    }
+  } else {
+    // ປິດ
+    _notifEnabled = false;
+    localStorage.setItem('admin_notif', 'off');
+    showToast('🔕 ປິດການແຈ້ງເຕືອນແລ້ວ', 'success');
+  }
+
+  updateNotifBtn();
+}
+
+function sendTestNotification() {
+  // ສົ່ງ in-app banner ທົດສອບ
+  showNotifBanner({
+    email: 'test@example.com',
+    displayName: 'ທົດສອບລະບົບ',
+    plan: 'monthly',
+  });
+}
+
+function fireNotification(reqData) {
+  if (!_notifEnabled) return;
+
+  const name   = reqData.displayName || reqData.email || 'ລູກຄ້າ';
+  const email  = reqData.email || '';
+  const planMap = { monthly: '1 ເດືອນ', yearly: '1 ປີ' };
+  const plan   = planMap[reqData.plan] || reqData.plan || '';
+
+  // ① Browser Notification (ສະແດງເຖິງແມ່ນ tab ບໍ່ active)
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const n = new Notification('🔔 ມີ Slip ໃໝ່ — Lao Karaoke Admin', {
+      body: name + (plan ? ' · ແຜນ ' + plan : '') + '\n' + email,
+      icon: 'https://emojicdn.elk.sh/🎤?style=apple',
+      badge: 'https://emojicdn.elk.sh/🎤?style=apple',
+      tag: 'slip-' + Date.now(),
+      requireInteraction: true,
+    });
+    n.onclick = () => { window.focus(); goToRequests(); n.close(); };
+    // ປິດອັດຕະໂນມັດ 20 ວິ
+    setTimeout(() => n.close(), 20000);
+  }
+
+  // ② In-app banner (ສະເໝີ)
+  showNotifBanner(reqData);
+
+  // ③ Tab title flashing
+  startTitleFlash(name);
+}
+
+function showNotifBanner(reqData) {
+  const name   = reqData.displayName || reqData.email || 'ລູກຄ້າ';
+  const email  = reqData.email || '';
+  const planMap = { monthly: '1 ເດືອນ', yearly: '1 ປີ' };
+  const plan   = planMap[reqData.plan] || reqData.plan || '';
+  const time   = new Date().toLocaleTimeString('lo-LA', { hour: '2-digit', minute: '2-digit' });
+
+  document.getElementById('nb-body').textContent =
+    '👤 ' + name + (plan ? '  ·  👑 ແຜນ ' + plan : '');
+  document.getElementById('nb-meta').textContent =
+    (email ? email + '  ·  ' : '') + '🕐 ' + time;
+
+  const banner = document.getElementById('notif-banner');
+  // reset animation
+  banner.style.display = 'none';
+  void banner.offsetWidth;
+  banner.style.display = 'block';
+
+  clearTimeout(_notifBannerTimer);
+  _notifBannerTimer = setTimeout(dismissBanner, 12000);
+
+  // ສຽງ (ໃຊ້ AudioContext ເພາະ autoplay policy)
+  playNotifSound();
+}
+
+function dismissBanner() {
+  document.getElementById('notif-banner').style.display = 'none';
+  clearTimeout(_notifBannerTimer);
+}
+
+function goToRequests() {
+  dismissBanner();
+  const btn = document.querySelector('.tab-btn:nth-child(2)');
+  switchTab('requests', btn);
+}
+
+// Tab title flash
+let _titleFlashInterval = null;
+let _originalTitle = document.title;
+function startTitleFlash(name) {
+  if (_titleFlashInterval) return;
+  let toggle = false;
+  _titleFlashInterval = setInterval(() => {
+    document.title = toggle ? _originalTitle : '🔔 Slip ໃໝ່ — ' + name;
+    toggle = !toggle;
+  }, 1000);
+  // ໝົດ 30 ວິ
+  setTimeout(stopTitleFlash, 30000);
+}
+function stopTitleFlash() {
+  clearInterval(_titleFlashInterval);
+  _titleFlashInterval = null;
+  document.title = _originalTitle;
+}
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) stopTitleFlash();
+});
+
+// Notification sound via AudioContext
+function playNotifSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const times = [0, 0.15, 0.30];
+    times.forEach(t => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0, ctx.currentTime + t);
+      gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.18);
+      osc.start(ctx.currentTime + t);
+      osc.stop(ctx.currentTime + t + 0.2);
+    });
+  } catch(e) { /* ignore */ }
+}
+
 // ══ STATE ═══════════════════════════════════════════════════════════════════
 let selectedDays = 30;
 let foundUserDoc = null;
@@ -1040,6 +1345,8 @@ auth.onAuthStateChanged(user => {
   accessDenied.style.display = 'none';
   document.getElementById('admin-info').textContent = user.email;
   renderRecent();
+  initNotifications(); // ✅ ເລີ່ມລະບົບ notification
+  startGlobalSlipListener(); // ✅ ຟັງ Firestore ທັງໝົດ (ບໍ່ຂຶ້ນກັບ tab)
 });
 
 async function loginGoogle() {
@@ -1315,13 +1622,16 @@ function loadRequests() {
 
         // ແຈ້ງເຕືອນເມື່ອມີຄຳຂໍໃໝ່
         snap.docChanges().forEach(change => {
-          if (change.type === 'added' && _reqCache.length > 1) {
+          if (change.type === 'added') {
             const r = change.doc.data();
             if (r.status === 'pending') {
-              showToast('🔔 ມີຄຳຂໍໃໝ່ຈາກ ' + (r.email || 'User'), 'success');
+              if (_isFirstLoad) return; // ບໍ່ແຈ້ງຕອນ load ຄັ້ງທຳອິດ
+              showToast('🔔 Slip ໃໝ່ຈາກ ' + (r.displayName || r.email || 'User'), 'success');
+              fireNotification(r); // ✅ fire push + banner + sound
             }
           }
         });
+        _isFirstLoad = false; // ຫຼັງ load ຄັ້ງທຳອິດສຳເລັດ
 
       }, err => {
         document.getElementById('requests-loading').innerHTML =
@@ -1885,5 +2195,21 @@ auth.onAuthStateChanged(user => {
   }
 });
 </script>
+
+<!-- NOTIFICATION BANNER -->
+<div id="notif-banner" onclick="goToRequests()">
+  <div class="nb-header">
+    <div class="nb-icon">🔔</div>
+    <div class="nb-title">ມີຄຳຂໍ Premium ໃໝ່!</div>
+    <button class="nb-close" onclick="event.stopPropagation();dismissBanner()">✕</button>
+  </div>
+  <div class="nb-body" id="nb-body">ລູກຄ້າສົ່ງ Slip ມາໃໝ່</div>
+  <div class="nb-meta" id="nb-meta"></div>
+  <div class="nb-action">
+    <button class="nb-btn-view" onclick="event.stopPropagation();goToRequests()">📋 ເບິ່ງຄຳຂໍ</button>
+    <button class="nb-btn-dismiss" onclick="event.stopPropagation();dismissBanner()">ປິດ</button>
+  </div>
+</div>
+
 </body>
 </html>
