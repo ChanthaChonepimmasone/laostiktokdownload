@@ -116,6 +116,12 @@
       gap: 6px;
     }
     .btn-notif:hover { background: rgba(245,200,66,.15); }
+    .btn-notif.btn-tg-test {
+      background: rgba(0,136,204,.1);
+      border-color: rgba(0,136,204,.4);
+      color: #29b6f6;
+    }
+    .btn-notif.btn-tg-test:hover { background: rgba(0,136,204,.2); }
     .btn-notif.off {
       background: none;
       border-color: var(--border);
@@ -899,6 +905,9 @@
     <button class="btn-notif" id="btn-notif" onclick="toggleNotification()" title="ເປີດ/ປິດ ການແຈ້ງເຕືອນ">
       🔔 <span id="notif-label">ເປີດແຈ້ງເຕືອນ</span>
     </button>
+    <button class="btn-notif btn-tg-test" onclick="testTelegram()" title="ທົດສອບ Telegram">
+      ✈️ <span>ທົດສອບ</span>
+    </button>
     <button class="btn-logout" onclick="auth.signOut()">ອອກ</button>
   </div>
 </header>
@@ -1111,6 +1120,69 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
+// ══ TELEGRAM NOTIFICATION ═══════════════════════════════════════════════════
+const TG_TOKEN  = '8678240592:AAHW7arW9UVDB9tkVHSnEeL9zSiRctEPEqk';
+const TG_CHAT   = '7158297924';
+
+
+async function testTelegram() {
+  showToast('✈️ ກຳລັງສົ່ງ Telegram ທົດສອບ...', 'success');
+  await sendTelegram({
+    displayName: 'ທົດສອບລະບົບ',
+    email: 'test@laokaraoke.com',
+    plan: 'monthly',
+    price: '50000',
+    uid: 'test-uid-001',
+  });
+  showToast('✅ ສົ່ງ Telegram ສຳເລັດ! ກວດສອບໃນ Telegram ໄດ້ເລີຍ', 'success');
+}
+
+async function sendTelegram(reqData) {
+  const name    = reqData.displayName || reqData.email || 'ລູກຄ້າ';
+  const email   = reqData.email || '—';
+  const uid     = reqData.uid   || '—';
+  const planMap = { monthly: '1 ເດືອນ (Monthly)', yearly: '1 ປີ (Yearly)' };
+  const plan    = planMap[reqData.plan] || reqData.plan || '—';
+  const price   = reqData.price ? Number(reqData.price).toLocaleString() + ' ກີບ' : '—';
+  const time    = new Date().toLocaleString('th-TH', {
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+
+  const msg = [
+    '🔔 *ມີ Slip ການໂອນໃໝ່!*',
+    '',
+    '👤 *ຊື່:* ' + name,
+    '📧 *Email:* ' + email,
+    '👑 *ແຜນ:* ' + plan,
+    '💰 *ລາຄາ:* ' + price,
+    '🕐 *ເວລາ:* ' + time,
+    '',
+    '📋 ກະລຸນາເຂົ້າ Admin ເພື່ອກວດສອບ ແລະ ອະນຸມັດ',
+  ].join('\n');
+
+  try {
+    const res = await fetch(
+      'https://api.telegram.org/bot' + TG_TOKEN + '/sendMessage',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id:    TG_CHAT,
+          text:       msg,
+          parse_mode: 'Markdown',
+        }),
+      }
+    );
+    const json = await res.json();
+    if (!json.ok) {
+      console.warn('Telegram error:', json.description);
+    }
+  } catch(e) {
+    console.warn('Telegram send failed:', e.message);
+  }
+}
+
 // ══ GLOBAL SLIP LISTENER (works on any tab) ════════════════════════════════
 let _globalSlipUnsub = null;
 let _globalFirstLoad = true;
@@ -1232,7 +1304,10 @@ function fireNotification(reqData) {
     setTimeout(() => n.close(), 20000);
   }
 
-  // ② In-app banner (ສະເໝີ)
+  // ② Telegram (ສົ່ງທຸກຄັ້ງ — ບໍ່ຂຶ້ນກັບ permission)
+  sendTelegram(reqData);
+
+  // ③ In-app banner (ສະເໝີ)
   showNotifBanner(reqData);
 
   // ③ Tab title flashing
