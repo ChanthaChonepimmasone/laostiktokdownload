@@ -993,6 +993,10 @@
             <div class="plan-name">3 ເດືອນ</div>
             <div class="plan-days">90 ວັນ</div>
           </div>
+          <div class="plan-btn" onclick="selectPlan(180, this)">
+            <div class="plan-name">6 ເດືອນ</div>
+            <div class="plan-days">180 ວັນ</div>
+          </div>
           <div class="plan-btn" onclick="selectPlan(365, this)">
             <div class="plan-name">1 ປີ</div>
             <div class="plan-days">365 ວັນ</div>
@@ -1153,7 +1157,7 @@ async function sendTelegram(reqData) {
   const name    = reqData.displayName || reqData.email || 'ລູກຄ້າ';
   const email   = reqData.email || '—';
   const uid     = reqData.uid   || '—';
-  const planMap = { monthly: '1 ເດືອນ (Monthly)', yearly: '1 ປີ (Yearly)' };
+  const planMap = { monthly: '1 ເດືອນ (Monthly)', quarterly: '3 ເດືອນ (Quarterly)', halfyear: '6 ເດືອນ (Half-year)', yearly: '1 ປີ (Yearly)' };
   const plan    = planMap[reqData.plan] || reqData.plan || '—';
   const price   = reqData.price ? Number(reqData.price).toLocaleString() + ' ກີບ' : '—';
   const time    = new Date().toLocaleString('th-TH', {
@@ -1340,7 +1344,7 @@ function fireNotification(reqData) {
 
   const name   = reqData.displayName || reqData.email || 'ລູກຄ້າ';
   const email  = reqData.email || '';
-  const planMap = { monthly: '1 ເດືອນ', yearly: '1 ປີ' };
+  const planMap = { monthly: '1 ເດືອນ', quarterly: '3 ເດືອນ', halfyear: '6 ເດືອນ', yearly: '1 ປີ' };
   const plan   = planMap[reqData.plan] || reqData.plan || '';
 
   // ① Browser Notification (ສະແດງເຖິງແມ່ນ tab ບໍ່ active)
@@ -1370,7 +1374,7 @@ function fireNotification(reqData) {
 function showNotifBanner(reqData) {
   const name   = reqData.displayName || reqData.email || 'ລູກຄ້າ';
   const email  = reqData.email || '';
-  const planMap = { monthly: '1 ເດືອນ', yearly: '1 ປີ' };
+  const planMap = { monthly: '1 ເດືອນ', quarterly: '3 ເດືອນ', halfyear: '6 ເດືອນ', yearly: '1 ປີ' };
   const plan   = planMap[reqData.plan] || reqData.plan || '';
   const time   = new Date().toLocaleTimeString('lo-LA', { hour: '2-digit', minute: '2-digit' });
 
@@ -1770,7 +1774,7 @@ function renderRequests(list) {
     const time = r.requestedAt
       ? r.requestedAt.toDate().toLocaleString('lo-LA')
       : '—';
-    const planMap = { monthly:'1 ເດືອນ', yearly:'1 ປີ' };
+    const planMap = { monthly:'1 ເດືອນ', quarterly:'3 ເດືອນ', halfyear:'6 ເດືອນ', yearly:'1 ປີ' };
     const planLabel = planMap[r.plan] || r.planLabel || r.plan || '—';
     const priceStr = r.price ? Number(r.price).toLocaleString() + ' ກີບ' : '—';
 
@@ -1826,7 +1830,7 @@ async function approveRequest(reqId, uid, plan) {
 
   try {
     // ກຳນົດວັນໝົດອາຍຸຕາມ Plan
-    const daysMap = { monthly: 30, yearly: 365 };
+    const daysMap = { monthly: 30, quarterly: 90, halfyear: 180, yearly: 365 };
     const days = daysMap[plan] || 30;
     const until = new Date();
     until.setDate(until.getDate() + days);
@@ -2084,7 +2088,7 @@ async function loadSlipHistory(uid) {
       const time = r.requestedAt
         ? r.requestedAt.toDate().toLocaleDateString('lo-LA', {year:'numeric',month:'short',day:'numeric'})
         : '—';
-      const planMap = { monthly:'1 ເດືອນ', yearly:'1 ປີ' };
+      const planMap = { monthly:'1 ເດືອນ', quarterly:'3 ເດືອນ', halfyear:'6 ເດືອນ', yearly:'1 ປີ' };
       const planLabel = planMap[r.plan] || r.plan || '—';
       const statusColor = { pending:'var(--accent)', approved:'var(--green)', rejected:'var(--red)' }[r.status] || 'var(--muted)';
       const statusIcon  = { pending:'⏳', approved:'✅', rejected:'❌' }[r.status] || '—';
@@ -2190,10 +2194,14 @@ async function loadRevenue() {
 
     // ── STATS ────────────────────────────────────────────────────────────────
     const totalRevenue = items.reduce((s, r) => s + (Number(r.price) || 0), 0);
-    const monthly = items.filter(r => r.plan === 'monthly');
-    const yearly  = items.filter(r => r.plan === 'yearly');
-    const monthlyRev = monthly.reduce((s, r) => s + (Number(r.price) || 0), 0);
-    const yearlyRev  = yearly.reduce((s,  r) => s + (Number(r.price) || 0), 0);
+    const monthly   = items.filter(r => r.plan === 'monthly');
+    const quarterly = items.filter(r => r.plan === 'quarterly');
+    const halfyear  = items.filter(r => r.plan === 'halfyear');
+    const yearly    = items.filter(r => r.plan === 'yearly');
+    const monthlyRev   = monthly.reduce((s, r) => s + (Number(r.price) || 0), 0);
+    const quarterlyRev = quarterly.reduce((s, r) => s + (Number(r.price) || 0), 0);
+    const halfyearRev  = halfyear.reduce((s, r) => s + (Number(r.price) || 0), 0);
+    const yearlyRev    = yearly.reduce((s,  r) => s + (Number(r.price) || 0), 0);
 
     document.getElementById('rev-stats').innerHTML = `
       <div class="rev-stat" style="grid-column:span 2;border-color:rgba(245,200,66,.3)">
@@ -2207,7 +2215,17 @@ async function loadRevenue() {
         <div class="rs-sub">${monthly.length} ລາຍການ</div>
       </div>
       <div class="rev-stat">
-        <div class="rs-label">🗓️ 1 ປີ</div>
+        <div class="rs-label">📆 3 ເດືອນ</div>
+        <div class="rs-num" style="color:var(--green)">${quarterlyRev.toLocaleString()}</div>
+        <div class="rs-sub">${quarterly.length} ລາຍການ</div>
+      </div>
+      <div class="rev-stat">
+        <div class="rs-label">🗓️ 6 ເດືອນ</div>
+        <div class="rs-num" style="color:var(--accent2)">${halfyearRev.toLocaleString()}</div>
+        <div class="rs-sub">${halfyear.length} ລາຍການ</div>
+      </div>
+      <div class="rev-stat">
+        <div class="rs-label">🎉 1 ປີ</div>
         <div class="rs-num" style="color:var(--accent2)">${yearlyRev.toLocaleString()}</div>
         <div class="rs-sub">${yearly.length} ລາຍການ</div>
       </div>`;
@@ -2251,7 +2269,7 @@ async function loadRevenue() {
       return;
     }
 
-    const planMap = { monthly:'1 ເດືອນ', yearly:'1 ປີ' };
+    const planMap = { monthly:'1 ເດືອນ', quarterly:'3 ເດືອນ', halfyear:'6 ເດືອນ', yearly:'1 ປີ' };
     document.getElementById('rev-list').innerHTML = items.map(r => {
       const initials = (r.displayName || r.email || '?').charAt(0).toUpperCase();
       const date = r.approvedAt
