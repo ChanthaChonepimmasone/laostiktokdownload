@@ -525,55 +525,30 @@
       .modal { padding: 28px 20px; }
     }
 
-    /* ── MIGRATION NOTICE ── */
-    .migrate-wall {
-      display: flex;
-      position: fixed; inset: 0;
-      background: var(--bg);
-      z-index: 9999;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      flex-direction: column;
-    }
-    .migrate-wall-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 44px 36px;
-      width: 100%;
-      max-width: 440px;
+    /* ── MIGRATION NOTICE (inline banner) ── */
+    .migrate-banner {
+      border: 2px solid #e53e3e;
+      background: #fff5f5;
+      border-radius: 14px;
+      padding: 20px 22px;
       text-align: center;
-      box-shadow: var(--shadow-md);
-      animation: slideUp 0.3s ease;
+      margin-bottom: 24px;
     }
-    .migrate-wall-icon {
-      width: 72px; height: 72px;
-      background: var(--primary);
-      border-radius: 18px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 32px; color: white; font-weight: 800;
-      margin: 0 auto 20px;
+    .migrate-banner h1 {
+      font-size: 1.5rem; font-weight: 800;
+      color: #c53030; margin-bottom: 6px; line-height: 1.4;
     }
-    .migrate-wall h2 {
-      font-size: 1.4rem; font-weight: 800;
-      color: var(--text); margin-bottom: 12px;
+    .migrate-banner p {
+      color: #9b2c2c; font-size: 0.92rem; margin-bottom: 14px;
     }
-    .migrate-wall-desc {
-      font-size: 0.94rem; color: var(--text-muted);
-      line-height: 1.7; margin-bottom: 28px;
-    }
-    .migrate-wall-link {
-      display: block; width: 100%;
-      padding: 14px;
+    .migrate-banner a {
+      display: inline-block;
       background: var(--primary); color: #fff;
-      border: none; border-radius: 11px;
-      font-size: 1rem; font-weight: 700;
-      cursor: pointer; font-family: inherit;
+      padding: 10px 22px; border-radius: 10px;
+      font-weight: 700; font-size: 0.92rem;
       text-decoration: none;
-      transition: background 0.2s;
     }
-    .migrate-wall-link:hover { background: var(--primary-hover); }
+    .migrate-banner a:hover { background: var(--primary-hover); }
 
     /* ── AUTH WALL ── */
     .auth-wall {
@@ -1062,19 +1037,6 @@
 </head>
 <body>
 
-<!-- ══ MIGRATION NOTICE ═══════════════════════════════════════════════════ -->
-<div class="migrate-wall" id="migrate-wall">
-  <div class="migrate-wall-card">
-    <div class="migrate-wall-icon">ລ</div>
-    <h2>Lao Karaoke ໄດ້ຍ້າຍທີ່ຢູ່ໃໝ່</h2>
-    <p class="migrate-wall-desc">
-      ພວກເຮົາໄດ້ຍ້າຍໄປໃຊ້ລິ້ງໃໝ່ແລ້ວ<br>
-      ກະລຸນາໃຊ້ລິ້ງນີ້ຕໍ່ໄປ ເນື່ອງຈາກລິ້ງປະຈຸບັນຈະຖືກປິດໃຊ້ງານໃນໄວໆນີ້
-    </p>
-    <a class="migrate-wall-link" href="http://laoskaraoke.com/">ໄປທີ່ laoskaraoke.com</a>
-  </div>
-</div>
-
 <!-- ══ AUTH WALL ══════════════════════════════════════════════════════════ -->
 <div class="auth-wall" id="auth-wall">
   <div class="auth-wall-card">
@@ -1297,9 +1259,10 @@
 <!-- ══ HOME PAGE ══════════════════════════════════════════════════════════ -->
 <div class="page active" id="page-home">
   <div class="container">
-    <div class="page-header">
-      <h1>ແປພາສາລາວ ເປັນ ພາສາຄາຣາໂອເກະ</h1>
-      <p>ແລະແປພາສາຄາຣາໂອເກະ ເປັນ ພາສາລາວ</p>
+    <div class="migrate-banner">
+      <h1>ພວກເຮົາໄດ້ຍ້າຍໄປໃຊ້ລິ້ງໃໝ່ແລ້ວ</h1>
+      <p>ເນື່ອງຈາກລິ້ງປະຈຸບັນຈະຖືກປິດໃຊ້ງານໃນໄວໆນີ້ ກະລຸນາໃຊ້ລິ້ງນີ້ຕໍ່ໄປ</p>
+      <a href="http://laoskaraoke.com/">ໄປທີ່ laoskaraoke.com</a>
     </div>
 
     <!-- Usage bar -->
