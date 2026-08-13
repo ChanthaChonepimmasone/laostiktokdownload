@@ -847,7 +847,7 @@
     }
     .p-avatar img { width: 100%; height: 100%; object-fit: cover; }
     .p-badge-img {
-      position: absolute; bottom: -3px; right: -3px;
+      position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
       width: 28px; height: 28px; object-fit: contain;
       filter: drop-shadow(0 1px 4px rgba(0,0,0,.2));
     }
@@ -1164,28 +1164,29 @@
     #page-game .kg-message.ok { color:#8fd6a0; }
     #page-game .kg-message.no { color:#f3a99a; }
 
-    #page-game .kg-overlay {
+    .kg-overlay {
       display:none; position:fixed; inset:0; z-index:500;
       background:rgba(21,26,58,.75); align-items:center; justify-content:center; padding:20px;
     }
-    #page-game .kg-overlay.show { display:flex; }
-    #page-game .kg-overlay-card {
+    .kg-overlay.show { display:flex; }
+    .kg-overlay-card {
       background:#fbf9f3; color:#1c1930; border-radius:var(--radius);
       padding:32px 28px; text-align:center; max-width:320px;
       box-shadow:0 24px 60px rgba(0,0,0,.5);
     }
-    #page-game .kg-overlay-card h3 { font-size:22px; margin-bottom:6px; color:#b8503f; }
-    #page-game .kg-overlay-card p { color:#6c6790; margin-bottom:2px; font-size:.9rem; }
-    #page-game .kg-overlay-score {
+    .kg-overlay-card h3 { font-size:22px; margin-bottom:6px; color:#b8503f; }
+    .kg-overlay-card p { color:#6c6790; margin-bottom:2px; font-size:.9rem; }
+    .kg-overlay-score {
       font-family:'JetBrains Mono', monospace, monospace;
       font-size:30px; font-weight:700; margin:12px 0 20px; color:#151a3a;
     }
-    #page-game .kg-overlay-card button {
+    .kg-overlay-card button {
       width:100%; height:46px; border:none; border-radius:999px;
       background:#d9a441; color:#151a3a; font-weight:700; font-size:14px; cursor:pointer;
     }
 
     /* ══ Profile edit (name + avatar) ══ */
+    .p-avatar-wrap { position: relative; }
     .p-edit-btn {
       position:absolute; right:-4px; bottom:6px;
       width:32px; height:32px; border-radius:50%;
@@ -1427,29 +1428,29 @@
 
         <div class="pm-step">
           <div class="pm-step-num">2</div>
-          <div class="pm-step-text">ໂອນ <strong id="pm-step2-amount">7,000 ກີບ</strong> ແລ້ວແຄັບຮູບຊະລີປການໂອນ</div>
+          <div class="pm-step-text">ໂອນ <strong id="pm-step2-amount">7,000 ກີບ</strong> ແລ້ວ screenshot ສະລິບ</div>
         </div>
         <div class="pm-step">
           <div class="pm-step-num">3</div>
-          <div class="pm-step-text">ອັບໂຫລດຮູບ ຊະລີປການໂອນ ລຸ່ມນີ້ ແລ້ວກົດ <strong>"ສົ່ງ"</strong></div>
+          <div class="pm-step-text">ອັບໂຫລດ Slip ລຸ່ມນີ້ ແລ້ວກົດ <strong>"ສົ່ງ Slip ຜ່ານ WhatsApp"</strong></div>
         </div>
 
         <!-- Upload -->
         <div class="pm-upload" id="pm-upload-area" onclick="document.getElementById('pm-slip-input').click()">
           <input type="file" id="pm-slip-input" accept="image/*" onchange="handlePmSlip(event)">
           <div class="pm-upload-icon" id="pm-upload-icon">📷</div>
-          <div class="pm-upload-text" id="pm-upload-text">ກົດເພື່ອເລືອກ ຮູບຊະລີປການໂອນ</div>
+          <div class="pm-upload-text" id="pm-upload-text">ກົດເພື່ອເລືອກ Screenshot Slip</div>
           <img id="pm-slip-preview" class="pm-slip-preview" alt="">
         </div>
       </div>
 
       <div class="pm-success" id="pm-success">
-        ✅ ສົ່ງ ຮູບຊະລີປການໂອນ ສຳເລັດ!<br>
+        ✅ ສົ່ງ Slip ຜ່ານ WhatsApp ສຳເລັດ!<br>
         <span style="font-size:.75rem;opacity:.85">ທີມງານຈະກວດສອບ ແລ້ວ Activate ພາຍໃນ 30 ນາທີ – 24 ຊົ່ວໂມງ</span>
       </div>
 
       <button class="btn-wa-primary" id="btn-wa-send" onclick="sendViaWhatsApp()" disabled>
-        💬 ສົ່ງຮູບຊະລີປການໂອນ
+        💬 ສົ່ງ Slip ຜ່ານ WhatsApp
       </button>
       <button class="btn-fallback" id="btn-fallback" onclick="sendPaymentConfirm()" disabled>
         ✅ ສົ່ງຢືນຢັນ (ບໍ່ມີ WhatsApp)
@@ -1623,6 +1624,17 @@
           <div><div class="s-label">WhatsApp</div><div class="s-sub">ຕິດຕໍ່ Admin ໂດຍກົງ</div></div>
         </div>
         <span class="s-arrow">↗</span>
+      </div>
+      <div class="settings-sep"></div>
+      <div class="settings-item" onclick="handleSendSlipWA()">
+        <div class="settings-item-left">
+          <div class="s-icon" style="background:rgba(37,211,102,.2)">🧾</div>
+          <div>
+            <div class="s-label" style="color:#25D366">ແຈ້ງຍອດ Slip Premium</div>
+            <div class="s-sub">ສົ່ງ Slip ຜ່ານ WhatsApp ທັນທີ</div>
+          </div>
+        </div>
+        <span class="s-arrow" style="color:#25D366">›</span>
       </div>
     </div>
 
@@ -2056,6 +2068,28 @@ function renderProfilePage() {
   }
 }
 
+// ══ SEND SLIP VIA WHATSAPP (from Profile) ════════════════════════════════
+function handleSendSlipWA() {
+  if (!currentUser) return;
+  const u    = currentUser;
+  const plan = PLANS[selectedPlan];
+  const now  = new Date();
+  const msg  = encodeURIComponent(
+    `🧾 ແຈ້ງຍອດ Premium Lao Karaoke\n` +
+    `👤 ຊື່: ${u.displayName || 'N/A'}\n` +
+    `📧 ອີເມວ: ${u.email || 'N/A'}\n` +
+    `🔑 UID: ${u.uid}\n` +
+    `💰 ຈຳນວນ: ${plan.priceStr} ກີບ\n` +
+    `📦 ແຜນ: ${plan.label} Premium\n` +
+    `🏦 ທະນາຄານ: ${selectedPaymentMethod === 'ldb' ? 'LDB Bank' : 'BCEL One'}\n` +
+    `📅 ວັນທີ: ${now.toLocaleDateString('lo-LA')}\n` +
+    `⏰ ເວລາ: ${now.toLocaleTimeString('lo-LA')}\n\n` +
+    `ກະລຸນາກວດສອບ ແລະ Activate Premium ດ້ວຍ 🙏\n` +
+    `[ກະລຸນາຄັດ Slip ຕໍ່ message ນີ້]`
+  );
+  window.open(`https://wa.me/${WHATSAPP_NUM}?text=${msg}`, '_blank');
+}
+
 // ══ AUTH HELPERS ════════════════════════════════════════════════════════════
 async function wallSignInGoogle() {
   const btn = document.getElementById('btn-wall-google');
@@ -2323,15 +2357,9 @@ async function sendViaWhatsApp() {
     `• ເວລາ: ${now.toLocaleTimeString('lo-LA')}\n\n` +
     `✅ ໂອນຜ່ານ ${selectedPaymentMethod === 'ldb' ? 'LDB Bank' : 'BCEL One'} ແລ້ວ`
   );
-  // ບໍ່ເປີດ WhatsApp ອັດຕະໂນມັດອີກຕໍ່ໄປ — ຂໍ້ມູນຖືກບັນທຶກໄວ້ໃນລະບົບແລ້ວ,
-  // ຖ້າຢາກຕິດຕໍ່ WhatsApp ໃຫ້ຜູ້ໃຊ້ກົດລິ້ງເອງ (ເບິ່ງ pm-success ລຸ່ມນີ້)
+  window.open(`https://wa.me/${WHATSAPP_NUM}?text=${msg}`, '_blank');
   document.getElementById('pm-success').style.display = 'block';
-  document.getElementById('pm-success').innerHTML =
-    `✅ ສົ່ງ Slip ສຳເລັດ!<br>
-     <span style="font-size:.75rem;opacity:.85">ທີມງານຈະກວດສອບ ແລ້ວ Activate ພາຍໃນ 30 ນາທີ – 24 ຊົ່ວໂມງ</span><br>
-     <a href="https://wa.me/${WHATSAPP_NUM}?text=${msg}" target="_blank" style="font-size:.78rem;font-weight:700">💬 ຕິດຕໍ່ WhatsApp (ຖ້າຕ້ອງການ)</a>`;
   btn.disabled = true; btn.textContent = '✅ ສົ່ງແລ້ວ — ລໍຖ້າ Admin';
-  document.getElementById('btn-fallback').style.display = 'none';
 }
 
 
@@ -5129,6 +5157,7 @@ async function saveProfileEdits() {
       customPhotoURL = epNewPhotoDataUrl;
     }
     await db.collection('users').doc(currentUser.uid).set(firestoreUpdate, { merge: true });
+    _userDocCacheData = Object.assign({}, _userDocCacheData, firestoreUpdate);
 
     closeEditProfileModal();
     renderProfilePage();
@@ -5140,6 +5169,7 @@ async function saveProfileEdits() {
     saveBtn.textContent = originalLabel;
   }
 }
+
 </script>
 
 <!-- ══ PREMIUM APPROVED POPUP ══════════════════════════════════════════════ -->
