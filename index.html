@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Lao:wght@600;700&family=Noto+Sans+Lao:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <style>
   :root{
     --bg:#EAF6F3;
@@ -486,6 +488,20 @@
 
 <script>
 (function(){
+  // ===== 1) ວາງ firebaseConfig ຂອງທ່ານແທນອັນນີ້ (ຄັດລອກຈາກ Firebase Console) =====
+  var firebaseConfig = {
+    apiKey: "AIzaSyCob3YpIH3beuuoONeXEgmu3C0ujXaU3Rk",
+    authDomain: "khee-toilet-finder-ca54b.firebaseapp.com",
+    projectId: "khee-toilet-finder-ca54b",
+    storageBucket: "khee-toilet-finder-ca54b.firebasestorage.app",
+    messagingSenderId: "168222384544",
+    appId: "1:168222384544:web:c5ad12601c28b03a6184c5"
+  };
+  firebase.initializeApp(firebaseConfig);
+  var db = firebase.firestore();
+  var toiletsCol = db.collection('toilets');
+  // ===============================================================
+
   var VIENTIANE = [17.9757, 102.6331];
   var map = L.map('map', { zoomControl:false }).setView(VIENTIANE, 14);
   L.control.zoom({ position:'bottomright' }).addTo(map);
@@ -623,23 +639,35 @@
     });
   }
 
-  async function loadToilets(){
-    try{
-      var res = await window.storage.get('toilets:all', true);
-      toilets = res && res.value ? JSON.parse(res.value) : [];
-    }catch(e){
-      toilets = [];
-    }
-    toilets.forEach(addMarkerForToilet);
-    renderList();
+  function clearAllMarkers(){
+    Object.keys(markers).forEach(function(id){
+      map.removeLayer(markers[id]);
+    });
+    markers = {};
   }
 
-  async function saveToilets(){
+  function listenToilets(){
+    toiletsCol.orderBy('addedAt', 'desc').onSnapshot(function(snapshot){
+      clearAllMarkers();
+      toilets = snapshot.docs.map(function(doc){
+        var d = doc.data();
+        d.id = doc.id;
+        return d;
+      });
+      toilets.forEach(addMarkerForToilet);
+      renderList();
+    }, function(err){
+      console.error(err);
+      showToast('ບໍ່ສາມາດເຊື່ອມຕໍ່ຖານຂໍ້ມູນໄດ້ ກວດ firebaseConfig / rules');
+    });
+  }
+
+  async function addToiletToDb(t){
     try{
-      var res = await window.storage.set('toilets:all', JSON.stringify(toilets), true);
-      if(!res){ showToast('ບັນທຶກບໍ່ສຳເລັດ, ລອງໃໝ່ອີກຄັ້ງ'); return false; }
+      await toiletsCol.add(t);
       return true;
     }catch(e){
+      console.error(e);
       showToast('ບັນທຶກບໍ່ສຳເລັດ, ລອງໃໝ່ອີກຄັ້ງ');
       return false;
     }
@@ -702,7 +730,6 @@
     modalSave.disabled = true;
     modalSave.textContent = 'ກຳລັງບັນທຶກ...';
     var t = {
-      id: 't_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
       lat: pendingLatLng.lat,
       lng: pendingLatLng.lng,
       name: fName.value.trim(),
@@ -712,17 +739,12 @@
       deviceId: deviceId,
       addedAt: Date.now()
     };
-    toilets.push(t);
-    var ok = await saveToilets();
+    var ok = await addToiletToDb(t);
     modalSave.textContent = 'ບັນທຶກ';
     modalSave.disabled = false;
     if(ok){
-      addMarkerForToilet(t);
-      renderList();
       showToast('ປັກໝຸດສຳເລັດແລ້ວ! ຂອບໃຈທີ່ຊ່ວຍເຫຼືອ 🙏');
       closeModal();
-    } else {
-      toilets.pop();
     }
   });
 
@@ -736,7 +758,7 @@
   document.getElementById('locateBtn').addEventListener('click', function(){ locateUser(true); });
 
   // ---- Init ----
-  loadToilets();
+  listenToilets();
   locateUser(true);
 })();
 </script>
