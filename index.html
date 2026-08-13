@@ -4794,12 +4794,33 @@ document.addEventListener('DOMContentLoaded', () => {
 // ── Lao word bank — the game shows the Lao word, and the player fills in
 //    missing letters of its Karaoke transliteration (generated live via
 //    the site's own translateLaoToKaraoke, so it always matches the tool). ──
-const KG_WORDS = [
+const KG_WORDS_DEFAULT = [
   "ແມວ","ໝາ","ນ້ຳ","ນົມ","ຄູ","ນັກຮຽນ","ໂຮງຮຽນ","ປຶ້ມ","ເຮືອນ","ດອກໄມ້",
   "ໂຕະ","ຕັ່ງ","ໂທລະສັບ","ຄອມພິວເຕີ","ຊ້າງ","ແມ່ນ້ຳ","ພູເຂົາ","ຕະຫຼາດ","ໂຮງໝໍ",
   "ໝາກກ້ວຍ","ໝາກກ້ຽງ","ໝາກໂປມ","ແປ້ນພິມ","ໜ້າຕ່າງ","ເມົ້າ","ຂອບໃຈ","ສະບາຍດີ",
   "ອາຫານ","ນ້ອງ","ອ້າຍ","ເອື້ອຍ","ພໍ່","ແມ່","ໝູ່","ວັນ","ເດືອນ","ປີ"
 ];
+// ຄຳສັບຈິງທີ່ໃຊ້ໃນເກມ — ຈະຖືກແທນທີ່ດ້ວຍລາຍການທີ່ Admin ຕັ້ງໄວ້ໃນ Firestore
+// (config/gameWords) ຖ້າມີ, ບໍ່ດັ່ງນັ້ນຈະໃຊ້ຄ່າເລີ່ມຕົ້ນຂ້າງເທິງ.
+let KG_WORDS = KG_WORDS_DEFAULT.slice();
+let kgWordsLoaded = false;
+let kgWordsLoadingPromise = null;
+
+function kgLoadWordsFromFirestore() {
+  if (kgWordsLoadingPromise) return kgWordsLoadingPromise;
+  kgWordsLoadingPromise = db.collection('config').doc('gameWords').get()
+    .then(snap => {
+      if (snap.exists && Array.isArray(snap.data().words) && snap.data().words.length) {
+        KG_WORDS = snap.data().words.slice();
+      }
+      kgWordsLoaded = true;
+    })
+    .catch(err => {
+      console.error('kgLoadWordsFromFirestore error', err);
+      kgWordsLoaded = true; // fall back to default list, don't block the game
+    });
+  return kgWordsLoadingPromise;
+}
 
 let kgScore = 0, kgLife = 3, kgStreak = 0;
 let kgCurrentKaraoke = "";
@@ -4821,6 +4842,14 @@ function kgRenderGamePage() {
   }
   lockEl.style.display = 'none';
   gameEl.style.display = '';
+
+  // Fetch the admin-defined word list once, then start the round
+  if (!kgWordsLoaded) {
+    kgLoadWordsFromFirestore().then(() => {
+      if (!kgCurrentKaraoke) kgNextQuestion();
+    });
+    return;
+  }
   // Only (re)start a fresh round if nothing is currently in progress
   if (!kgCurrentKaraoke) kgNextQuestion();
 }
