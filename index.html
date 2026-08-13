@@ -157,6 +157,16 @@
   .tag--free{ background:#DFF3EA; color:var(--teal-dark); }
   .tag--paid{ background:#FFE9CF; color:var(--accent-dark); }
   .tag--access{ background:#E4EEFF; color:#2E5AAC; }
+  .popup__delete{
+    margin-top:8px;
+    padding-top:8px;
+    border-top:1px solid var(--line);
+    color:var(--coral);
+    font-size:12.5px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .popup__delete:active{ opacity:0.6; }
 
   /* ---------- Pin mode banner ---------- */
   .pin-banner{
@@ -287,6 +297,16 @@
     color:var(--teal);
     flex-shrink:0;
   }
+  .toilet-item__del{
+    background:none;
+    border:none;
+    font-size:15px;
+    padding:4px;
+    cursor:pointer;
+    flex-shrink:0;
+    opacity:0.7;
+  }
+  .toilet-item__del:active{ opacity:1; }
   .empty-state{
     text-align:center;
     padding:34px 20px;
@@ -572,6 +592,20 @@
     return '<div class="toilet-pin' + (mine ? ' is-mine' : '') + '"><span>🚽</span></div>';
   }
 
+  async function deleteToilet(id){
+    if(!confirm('ຕ້ອງການລົບໝຸດນີ້ອອກແທ້ບໍ?')) return;
+    try{
+      await toiletsCol.doc(id).delete();
+      showToast('ລົບໝຸດແລ້ວ');
+      map.closePopup();
+      closeSheet();
+    }catch(e){
+      console.error(e);
+      showToast('ລົບບໍ່ສຳເລັດ, ລອງໃໝ່ອີກຄັ້ງ');
+    }
+  }
+  window.__kheeDeleteToilet = deleteToilet;
+
   function addMarkerForToilet(t){
     var icon = L.divIcon({
       className:'',
@@ -585,10 +619,14 @@
       (t.type === 'paid' ? 'ເສຍຄ່າ' : 'ຟຣີ') + '</span>' +
       (t.accessible ? '<span class="tag tag--access">ຄົນພິການ</span>' : '');
     var noteHtml = t.note ? '<div class="popup__meta">' + escapeHtml(t.note) + '</div>' : '';
+    var deleteHtml = t.deviceId === deviceId
+      ? '<div class="popup__delete" onclick="window.__kheeDeleteToilet(\'' + t.id + '\')">🗑️ ລົບໝຸດນີ້</div>'
+      : '';
     m.bindPopup(
       '<div class="popup__name">' + escapeHtml(t.name) + '</div>' +
       noteHtml +
-      '<div class="popup__tags">' + tagsHtml + '</div>'
+      '<div class="popup__tags">' + tagsHtml + '</div>' +
+      deleteHtml
     );
     markers[t.id] = m;
   }
@@ -623,14 +661,20 @@
       var t = item.t;
       var row = document.createElement('div');
       row.className = 'toilet-item';
+      var isMine = t.deviceId === deviceId;
       row.innerHTML =
         '<div class="toilet-item__icon">🚽</div>' +
         '<div class="toilet-item__body">' +
           '<div class="toilet-item__name">' + escapeHtml(t.name) + '</div>' +
           '<div class="toilet-item__note">' + (t.note ? escapeHtml(t.note) : (t.type === 'paid' ? 'ເສຍຄ່າ' : 'ຟຣີ')) + '</div>' +
         '</div>' +
-        (item.d !== null ? '<div class="toilet-item__dist">' + fmtDist(item.d) + '</div>' : '');
-      row.addEventListener('click', function(){
+        (item.d !== null ? '<div class="toilet-item__dist">' + fmtDist(item.d) + '</div>' : '') +
+        (isMine ? '<button class="toilet-item__del" data-id="' + t.id + '">🗑️</button>' : '');
+      row.addEventListener('click', function(ev){
+        if(ev.target.classList.contains('toilet-item__del')){
+          deleteToilet(ev.target.getAttribute('data-id'));
+          return;
+        }
         map.setView([t.lat, t.lng], 17);
         if(markers[t.id]) markers[t.id].openPopup();
         closeSheet();
