@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+<title>ຂີ້ | ຄົ້ນຫາ ແລະ ປັກໝຸດຫ້ອງນ້ຳ</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Lao:wght@600;700&family=Noto+Sans+Lao:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root{
+    --bg:#EAF6F3;
+    --surface:#FFFFFF;
+    --ink:#0B2B29;
+    --ink-soft:#4C6B67;
+    --teal:#0F6D66;
+    --teal-dark:#0A4F4A;
+    --teal-pale:#D3ECE8;
+    --accent:#FFB627;
+    --accent-dark:#E6980A;
+    --coral:#FF6F59;
+    --line:#CFE8E4;
+    --radius-lg:22px;
+    --radius-md:14px;
+    --shadow:0 10px 30px rgba(11,43,41,0.14);
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Noto Sans Lao','Noto Sans',sans-serif;
+    overflow:hidden;
+  }
+  #app{
+    position:relative;
+    height:100vh;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* ---------- Header ---------- */
+  .header{
+    position:relative;
+    z-index:20;
+    background:var(--teal);
+    color:#fff;
+    padding:16px 18px 22px;
+    flex-shrink:0;
+  }
+  .header__row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .brand__mark{
+    width:38px;height:38px;
+    border-radius:12px;
+    background:var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    font-size:20px;
+    flex-shrink:0;
+    box-shadow:0 4px 10px rgba(0,0,0,0.15);
+  }
+  .brand__text h1{
+    font-family:'Noto Serif Lao',serif;
+    font-size:20px;
+    font-weight:700;
+    margin:0;
+    line-height:1.1;
+  }
+  .brand__text p{
+    margin:2px 0 0;
+    font-size:11.5px;
+    color:rgba(255,255,255,0.78);
+  }
+  .locate-btn{
+    width:38px;height:38px;
+    border-radius:50%;
+    border:none;
+    background:rgba(255,255,255,0.16);
+    color:#fff;
+    font-size:16px;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .locate-btn:active{background:rgba(255,255,255,0.3);}
+
+  .tile-strip{
+    height:9px;
+    width:100%;
+    background-image: repeating-linear-gradient(
+      -45deg,
+      var(--accent) 0 10px,
+      var(--teal-dark) 10px 20px
+    );
+    opacity:0.55;
+  }
+
+  /* ---------- Map ---------- */
+  #map{
+    flex:1;
+    width:100%;
+    z-index:1;
+  }
+  .leaflet-container{
+    font-family:'Noto Sans Lao',sans-serif;
+    background:var(--teal-pale);
+  }
+  .toilet-pin{
+    display:flex;align-items:center;justify-content:center;
+    width:34px;height:34px;
+    border-radius:50% 50% 50% 0;
+    transform:rotate(-45deg);
+    background:var(--teal);
+    border:2px solid #fff;
+    box-shadow:0 3px 8px rgba(11,43,41,0.35);
+  }
+  .toilet-pin span{
+    transform:rotate(45deg);
+    font-size:16px;
+  }
+  .toilet-pin.is-mine{ background:var(--coral); }
+  .user-dot{
+    width:16px;height:16px;
+    border-radius:50%;
+    background:#2E90FA;
+    border:3px solid #fff;
+    box-shadow:0 0 0 4px rgba(46,144,250,0.25);
+  }
+  .leaflet-popup-content-wrapper{
+    border-radius:var(--radius-md);
+    box-shadow:var(--shadow);
+  }
+  .leaflet-popup-content{ margin:12px 14px; font-size:13.5px; min-width:170px; }
+  .popup__name{ font-weight:700; font-size:14.5px; margin-bottom:3px; }
+  .popup__meta{ color:var(--ink-soft); font-size:12px; margin-bottom:6px; }
+  .popup__tags{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tag{
+    display:inline-block;
+    padding:2px 8px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:600;
+  }
+  .tag--free{ background:#DFF3EA; color:var(--teal-dark); }
+  .tag--paid{ background:#FFE9CF; color:var(--accent-dark); }
+  .tag--access{ background:#E4EEFF; color:#2E5AAC; }
+
+  /* ---------- Pin mode banner ---------- */
+  .pin-banner{
+    position:absolute;
+    top:96px;
+    left:50%;
+    transform:translateX(-50%) translateY(-140%);
+    z-index:30;
+    background:var(--ink);
+    color:#fff;
+    padding:9px 16px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:500;
+    box-shadow:var(--shadow);
+    transition:transform .25s ease;
+    white-space:nowrap;
+  }
+  .pin-banner.show{ transform:translateX(-50%) translateY(0); }
+
+  /* ---------- FAB ---------- */
+  .fab{
+    position:absolute;
+    right:16px;
+    bottom:22px;
+    z-index:25;
+    background:var(--accent);
+    color:var(--ink);
+    border:none;
+    border-radius:999px;
+    padding:14px 18px;
+    font-size:14.5px;
+    font-weight:700;
+    display:flex;align-items:center;gap:8px;
+    box-shadow:0 8px 20px rgba(255,182,39,0.5);
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .fab.active{ background:var(--coral); color:#fff; box-shadow:0 8px 20px rgba(255,111,89,0.5); }
+  .fab__icon{ font-size:17px; }
+
+  .list-toggle{
+    position:absolute;
+    left:16px;
+    bottom:22px;
+    z-index:25;
+    background:var(--surface);
+    color:var(--ink);
+    border:none;
+    border-radius:999px;
+    padding:14px 16px;
+    font-size:13.5px;
+    font-weight:700;
+    display:flex;align-items:center;gap:6px;
+    box-shadow:var(--shadow);
+    cursor:pointer;
+    font-family:inherit;
+  }
+
+  /* ---------- Bottom sheet list ---------- */
+  .sheet{
+    position:absolute;
+    left:0;right:0;bottom:0;
+    z-index:40;
+    background:var(--surface);
+    border-radius:22px 22px 0 0;
+    box-shadow:0 -10px 30px rgba(11,43,41,0.2);
+    max-height:70vh;
+    transform:translateY(100%);
+    transition:transform .28s ease;
+    display:flex;
+    flex-direction:column;
+  }
+  .sheet.open{ transform:translateY(0); }
+  .sheet__handle{
+    width:40px;height:4px;
+    background:var(--line);
+    border-radius:99px;
+    margin:10px auto 4px;
+    flex-shrink:0;
+  }
+  .sheet__head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:6px 18px 10px;
+    flex-shrink:0;
+  }
+  .sheet__head h2{
+    font-family:'Noto Serif Lao',serif;
+    font-size:16.5px;
+    margin:0;
+  }
+  .sheet__close{
+    background:var(--bg);
+    border:none;
+    width:30px;height:30px;
+    border-radius:50%;
+    font-size:14px;
+    cursor:pointer;
+    color:var(--ink-soft);
+  }
+  .sheet__list{
+    overflow-y:auto;
+    padding:0 12px 18px;
+  }
+  .toilet-item{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 8px;
+    border-bottom:1px solid var(--line);
+    cursor:pointer;
+  }
+  .toilet-item:last-child{ border-bottom:none; }
+  .toilet-item__icon{
+    width:38px;height:38px;
+    border-radius:12px;
+    background:var(--teal-pale);
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px;
+    flex-shrink:0;
+  }
+  .toilet-item__body{ flex:1; min-width:0; }
+  .toilet-item__name{ font-weight:700; font-size:14px; margin-bottom:2px; }
+  .toilet-item__note{ font-size:12px; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .toilet-item__dist{
+    font-size:12px;
+    font-weight:700;
+    color:var(--teal);
+    flex-shrink:0;
+  }
+  .empty-state{
+    text-align:center;
+    padding:34px 20px;
+    color:var(--ink-soft);
+    font-size:13.5px;
+  }
+  .empty-state__icon{ font-size:34px; margin-bottom:8px; }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position:absolute;
+    inset:0;
+    background:rgba(11,43,41,0.45);
+    z-index:60;
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal{
+    background:var(--surface);
+    width:100%;
+    max-width:480px;
+    border-radius:22px 22px 0 0;
+    padding:20px 20px 26px;
+    box-shadow:0 -10px 30px rgba(11,43,41,0.25);
+    animation:slideUp .22s ease;
+  }
+  @keyframes slideUp{ from{ transform:translateY(30px); opacity:0;} to{ transform:translateY(0); opacity:1;} }
+  .modal h3{
+    font-family:'Noto Serif Lao',serif;
+    font-size:17px;
+    margin:0 0 4px;
+  }
+  .modal p.hint{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin:0 0 16px;
+  }
+  .field{ margin-bottom:14px; }
+  .field label{
+    display:block;
+    font-size:12.5px;
+    font-weight:700;
+    margin-bottom:6px;
+    color:var(--ink-soft);
+  }
+  .field input[type=text], .field textarea{
+    width:100%;
+    border:1.5px solid var(--line);
+    border-radius:var(--radius-md);
+    padding:10px 12px;
+    font-size:14px;
+    font-family:inherit;
+    color:var(--ink);
+    background:var(--bg);
+    resize:none;
+  }
+  .field input[type=text]:focus, .field textarea:focus{
+    outline:none;
+    border-color:var(--teal);
+  }
+  .seg{
+    display:flex;
+    gap:8px;
+  }
+  .seg button{
+    flex:1;
+    padding:9px 6px;
+    border-radius:var(--radius-md);
+    border:1.5px solid var(--line);
+    background:var(--bg);
+    font-family:inherit;
+    font-size:13px;
+    font-weight:600;
+    color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .seg button.selected{
+    background:var(--teal);
+    border-color:var(--teal);
+    color:#fff;
+  }
+  .check-row{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    padding:10px 12px;
+    background:var(--bg);
+    border-radius:var(--radius-md);
+    border:1.5px solid var(--line);
+  }
+  .check-row input{ width:17px;height:17px; accent-color:var(--teal); }
+  .check-row label{ font-size:13.5px; margin:0; font-weight:500; color:var(--ink); }
+  .modal__actions{
+    display:flex;
+    gap:10px;
+    margin-top:6px;
+  }
+  .btn{
+    flex:1;
+    border:none;
+    border-radius:999px;
+    padding:13px;
+    font-family:inherit;
+    font-size:14.5px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .btn--ghost{ background:var(--bg); color:var(--ink-soft); }
+  .btn--primary{ background:var(--accent); color:var(--ink); }
+  .btn--primary:disabled{ opacity:0.5; cursor:not-allowed; }
+
+  .toast{
+    position:absolute;
+    top:96px;
+    left:50%;
+    transform:translateX(-50%) translateY(-140%);
+    z-index:70;
+    background:var(--ink);
+    color:#fff;
+    padding:10px 18px;
+    border-radius:999px;
+    font-size:13px;
+    box-shadow:var(--shadow);
+    transition:transform .25s ease;
+    white-space:nowrap;
+  }
+  .toast.show{ transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="header">
+    <div class="header__row">
+      <div class="brand">
+        <div class="brand__mark">🧻</div>
+        <div class="brand__text">
+          <h1>ຂີ້</h1>
+          <p>ຄົ້ນຫາ ແລະ ປັກໝຸດຫ້ອງນ້ຳໃກ້ໆ</p>
+        </div>
+      </div>
+      <button class="locate-btn" id="locateBtn" title="ຫາຕຳແໜ່ງຂ້ອຍ">🎯</button>
+    </div>
+  </div>
+  <div class="tile-strip"></div>
+
+  <div id="map"></div>
+
+  <div class="pin-banner" id="pinBanner">ແຕະໃສ່ແຜນທີ່ ບ່ອນທີ່ຫ້ອງນ້ຳຢູ່ 📍</div>
+
+  <button class="list-toggle" id="listToggle">☰ ລາຍການ</button>
+  <button class="fab" id="fabBtn"><span class="fab__icon">📍</span><span id="fabLabel">ປັກໝຸດຫ້ອງນ້ຳ</span></button>
+
+  <div class="sheet" id="sheet">
+    <div class="sheet__handle"></div>
+    <div class="sheet__head">
+      <h2 id="sheetTitle">ຫ້ອງນ້ຳໃກ້ໆ</h2>
+      <button class="sheet__close" id="sheetClose">✕</button>
+    </div>
+    <div class="sheet__list" id="sheetList"></div>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h3>ປັກໝຸດຫ້ອງນ້ຳໃໝ່</h3>
+      <p class="hint">ໃສ່ຂໍ້ມູນສັ້ນໆ ເພື່ອໃຫ້ຄົນອື່ນຫາເຫັນງ່າຍ</p>
+      <div class="field">
+        <label>ຊື່ສະຖານທີ່ *</label>
+        <input type="text" id="fName" placeholder="ຕົວຢ່າງ: ຫ້າງ ຊັ້ນ 2, ປັ້ມ ptt..." maxlength="60" />
+      </div>
+      <div class="field">
+        <label>ໝາຍເຫດ (ບໍ່ບັງຄັບ)</label>
+        <textarea id="fNote" rows="2" placeholder="ຕົວຢ່າງ: ຢູ່ຫຼັງຮ້ານ, ຕ້ອງຂໍກະແຈ..." maxlength="120"></textarea>
+      </div>
+      <div class="field">
+        <label>ຄ່າບໍລິການ</label>
+        <div class="seg">
+          <button type="button" id="segFree" class="selected">ຟຣີ</button>
+          <button type="button" id="segPaid">ເສຍຄ່າ</button>
+        </div>
+      </div>
+      <div class="field">
+        <div class="check-row">
+          <input type="checkbox" id="fAccess" />
+          <label for="fAccess">ມີທາງເຂົ້າສຳລັບຄົນພິການ</label>
+        </div>
+      </div>
+      <div class="modal__actions">
+        <button class="btn btn--ghost" id="modalCancel">ຍົກເລີກ</button>
+        <button class="btn btn--primary" id="modalSave" disabled>ບັນທຶກ</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+(function(){
+  var VIENTIANE = [17.9757, 102.6331];
+  var map = L.map('map', { zoomControl:false }).setView(VIENTIANE, 14);
+  L.control.zoom({ position:'bottomright' }).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom:19,
+    attribution:'&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  var userLatLng = null;
+  var userMarker = null;
+  var toilets = [];
+  var markers = {};
+  var pinMode = false;
+  var pendingLatLng = null;
+  var deviceId = getDeviceId();
+
+  function getDeviceId(){
+    var k = 'khee_device_id_temp';
+    if(!window.__kheeDeviceId){
+      window.__kheeDeviceId = 'd_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+    return window.__kheeDeviceId;
+  }
+
+  function showToast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 2200);
+  }
+
+  function haversine(a, b){
+    var R = 6371000;
+    var dLat = (b[0]-a[0]) * Math.PI/180;
+    var dLng = (b[1]-a[1]) * Math.PI/180;
+    var lat1 = a[0] * Math.PI/180;
+    var lat2 = b[0] * Math.PI/180;
+    var h = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+  function fmtDist(m){
+    if(m < 1000) return Math.round(m) + ' ມ';
+    return (m/1000).toFixed(1) + ' ກມ';
+  }
+
+  function locateUser(recenter){
+    if(!navigator.geolocation){
+      showToast('ອຸປະກອນນີ້ບໍ່ຮອງຮັບການຫາຕຳແໜ່ງ');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(function(pos){
+      userLatLng = [pos.coords.latitude, pos.coords.longitude];
+      if(!userMarker){
+        userMarker = L.marker(userLatLng, {
+          icon: L.divIcon({ className:'', html:'<div class="user-dot"></div>', iconSize:[16,16] })
+        }).addTo(map);
+      } else {
+        userMarker.setLatLng(userLatLng);
+      }
+      if(recenter) map.setView(userLatLng, 15);
+      renderList();
+    }, function(){
+      showToast('ບໍ່ສາມາດຫາຕຳແໜ່ງໄດ້ ກະລຸນາອະນຸຍາດການເຂົ້າເຖິງທີ່ຕັ້ງ');
+    }, { enableHighAccuracy:true, timeout:8000 });
+  }
+
+  function pinHtml(mine){
+    return '<div class="toilet-pin' + (mine ? ' is-mine' : '') + '"><span>🚽</span></div>';
+  }
+
+  function addMarkerForToilet(t){
+    var icon = L.divIcon({
+      className:'',
+      html: pinHtml(t.deviceId === deviceId),
+      iconSize:[34,34],
+      iconAnchor:[17,32],
+      popupAnchor:[0,-30]
+    });
+    var m = L.marker([t.lat, t.lng], { icon: icon }).addTo(map);
+    var tagsHtml = '<span class="tag ' + (t.type === 'paid' ? 'tag--paid' : 'tag--free') + '">' +
+      (t.type === 'paid' ? 'ເສຍຄ່າ' : 'ຟຣີ') + '</span>' +
+      (t.accessible ? '<span class="tag tag--access">ຄົນພິການ</span>' : '');
+    var noteHtml = t.note ? '<div class="popup__meta">' + escapeHtml(t.note) + '</div>' : '';
+    m.bindPopup(
+      '<div class="popup__name">' + escapeHtml(t.name) + '</div>' +
+      noteHtml +
+      '<div class="popup__tags">' + tagsHtml + '</div>'
+    );
+    markers[t.id] = m;
+  }
+
+  function escapeHtml(s){
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function renderList(){
+    var listEl = document.getElementById('sheetList');
+    var titleEl = document.getElementById('sheetTitle');
+    if(toilets.length === 0){
+      titleEl.textContent = 'ຫ້ອງນ້ຳໃກ້ໆ';
+      listEl.innerHTML = '<div class="empty-state"><div class="empty-state__icon">🧻</div>ຍັງບໍ່ມີຫ້ອງນ້ຳຖືກປັກໄວ້ໃນແຜນທີ່<br/>ເປັນຄົນທຳອິດ ກົດ "ປັກໝຸດຫ້ອງນ້ຳ" ເລີຍ!</div>';
+      return;
+    }
+    var withDist = toilets.map(function(t){
+      var d = userLatLng ? haversine(userLatLng, [t.lat, t.lng]) : null;
+      return { t:t, d:d };
+    });
+    withDist.sort(function(a,b){
+      if(a.d === null && b.d === null) return 0;
+      if(a.d === null) return 1;
+      if(b.d === null) return -1;
+      return a.d - b.d;
+    });
+    titleEl.textContent = 'ຫ້ອງນ້ຳໃກ້ໆ (' + toilets.length + ')';
+    listEl.innerHTML = '';
+    withDist.forEach(function(item){
+      var t = item.t;
+      var row = document.createElement('div');
+      row.className = 'toilet-item';
+      row.innerHTML =
+        '<div class="toilet-item__icon">🚽</div>' +
+        '<div class="toilet-item__body">' +
+          '<div class="toilet-item__name">' + escapeHtml(t.name) + '</div>' +
+          '<div class="toilet-item__note">' + (t.note ? escapeHtml(t.note) : (t.type === 'paid' ? 'ເສຍຄ່າ' : 'ຟຣີ')) + '</div>' +
+        '</div>' +
+        (item.d !== null ? '<div class="toilet-item__dist">' + fmtDist(item.d) + '</div>' : '');
+      row.addEventListener('click', function(){
+        map.setView([t.lat, t.lng], 17);
+        if(markers[t.id]) markers[t.id].openPopup();
+        closeSheet();
+      });
+      listEl.appendChild(row);
+    });
+  }
+
+  async function loadToilets(){
+    try{
+      var res = await window.storage.get('toilets:all', true);
+      toilets = res && res.value ? JSON.parse(res.value) : [];
+    }catch(e){
+      toilets = [];
+    }
+    toilets.forEach(addMarkerForToilet);
+    renderList();
+  }
+
+  async function saveToilets(){
+    try{
+      var res = await window.storage.set('toilets:all', JSON.stringify(toilets), true);
+      if(!res){ showToast('ບັນທຶກບໍ່ສຳເລັດ, ລອງໃໝ່ອີກຄັ້ງ'); return false; }
+      return true;
+    }catch(e){
+      showToast('ບັນທຶກບໍ່ສຳເລັດ, ລອງໃໝ່ອີກຄັ້ງ');
+      return false;
+    }
+  }
+
+  // ---- Pin mode ----
+  var fabBtn = document.getElementById('fabBtn');
+  var fabLabel = document.getElementById('fabLabel');
+  var pinBanner = document.getElementById('pinBanner');
+
+  fabBtn.addEventListener('click', function(){
+    pinMode = !pinMode;
+    fabBtn.classList.toggle('active', pinMode);
+    fabLabel.textContent = pinMode ? 'ຍົກເລີກ' : 'ປັກໝຸດຫ້ອງນ້ຳ';
+    pinBanner.classList.toggle('show', pinMode);
+    closeSheet();
+  });
+
+  map.on('click', function(e){
+    if(!pinMode) return;
+    pendingLatLng = e.latlng;
+    openModal();
+  });
+
+  // ---- Modal ----
+  var modalOverlay = document.getElementById('modalOverlay');
+  var fName = document.getElementById('fName');
+  var fNote = document.getElementById('fNote');
+  var fAccess = document.getElementById('fAccess');
+  var segFree = document.getElementById('segFree');
+  var segPaid = document.getElementById('segPaid');
+  var modalSave = document.getElementById('modalSave');
+  var selectedType = 'free';
+
+  function openModal(){
+    fName.value = '';
+    fNote.value = '';
+    fAccess.checked = false;
+    selectedType = 'free';
+    segFree.classList.add('selected');
+    segPaid.classList.remove('selected');
+    modalSave.disabled = true;
+    modalOverlay.classList.add('open');
+    setTimeout(function(){ fName.focus(); }, 200);
+  }
+  function closeModal(){
+    modalOverlay.classList.remove('open');
+    pinMode = false;
+    fabBtn.classList.remove('active');
+    fabLabel.textContent = 'ປັກໝຸດຫ້ອງນ້ຳ';
+    pinBanner.classList.remove('show');
+  }
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+  segFree.addEventListener('click', function(){ selectedType='free'; segFree.classList.add('selected'); segPaid.classList.remove('selected'); });
+  segPaid.addEventListener('click', function(){ selectedType='paid'; segPaid.classList.add('selected'); segFree.classList.remove('selected'); });
+  fName.addEventListener('input', function(){ modalSave.disabled = fName.value.trim().length === 0; });
+
+  modalSave.addEventListener('click', async function(){
+    if(!pendingLatLng || fName.value.trim().length === 0) return;
+    modalSave.disabled = true;
+    modalSave.textContent = 'ກຳລັງບັນທຶກ...';
+    var t = {
+      id: 't_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+      lat: pendingLatLng.lat,
+      lng: pendingLatLng.lng,
+      name: fName.value.trim(),
+      note: fNote.value.trim(),
+      type: selectedType,
+      accessible: fAccess.checked,
+      deviceId: deviceId,
+      addedAt: Date.now()
+    };
+    toilets.push(t);
+    var ok = await saveToilets();
+    modalSave.textContent = 'ບັນທຶກ';
+    modalSave.disabled = false;
+    if(ok){
+      addMarkerForToilet(t);
+      renderList();
+      showToast('ປັກໝຸດສຳເລັດແລ້ວ! ຂອບໃຈທີ່ຊ່ວຍເຫຼືອ 🙏');
+      closeModal();
+    } else {
+      toilets.pop();
+    }
+  });
+
+  // ---- Sheet ----
+  var sheet = document.getElementById('sheet');
+  function openSheet(){ sheet.classList.add('open'); renderList(); }
+  function closeSheet(){ sheet.classList.remove('open'); }
+  document.getElementById('listToggle').addEventListener('click', openSheet);
+  document.getElementById('sheetClose').addEventListener('click', closeSheet);
+
+  document.getElementById('locateBtn').addEventListener('click', function(){ locateUser(true); });
+
+  // ---- Init ----
+  loadToilets();
+  locateUser(true);
+})();
+</script>
+</body>
+</html>
