@@ -539,11 +539,20 @@
   var deviceId = getDeviceId();
 
   function getDeviceId(){
-    var k = 'khee_device_id_temp';
-    if(!window.__kheeDeviceId){
-      window.__kheeDeviceId = 'd_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    var k = 'khee_device_id';
+    try{
+      var existing = localStorage.getItem(k);
+      if(existing) return existing;
+      var fresh = 'd_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem(k, fresh);
+      return fresh;
+    }catch(e){
+      // localStorage unavailable (e.g. private mode) — fall back to in-memory id
+      if(!window.__kheeDeviceId){
+        window.__kheeDeviceId = 'd_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      }
+      return window.__kheeDeviceId;
     }
-    return window.__kheeDeviceId;
   }
 
   function showToast(msg){
